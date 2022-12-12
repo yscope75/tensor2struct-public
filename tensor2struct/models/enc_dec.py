@@ -1,3 +1,4 @@
+import attr
 import torch
 import torch.utils.data
 
@@ -68,6 +69,29 @@ class EncDecPreproc(abstract_preproc.AbstractPreproc):
             self.enc_preproc.dataset(section), self.dec_preproc.dataset(section)
         )
 
+@attr.s
+class SpiderEncoderState:
+    state = attr.ib()
+    memory = attr.ib()
+    question_memory = attr.ib()
+    schema_memory = attr.ib()
+    words_for_copying = attr.ib()
+
+    pointer_memories = attr.ib()
+    pointer_maps = attr.ib()
+
+    m2c_align_mat = attr.ib()
+    m2t_align_mat = attr.ib()
+
+    # for copying
+    tokenizer = attr.ib()
+
+    def find_word_occurrences(self, token):
+        occurrences = [i for i, w in enumerate(self.words_for_copying) if w == token]
+        if len(occurrences) > 0:
+            return occurrences[0]
+        else:
+            return None
 
 @registry.register("model", "EncDecV2")
 class SemiBatchedEncDecModel(torch.nn.Module):
@@ -154,6 +178,97 @@ class SemiBatchedEncDecModel(torch.nn.Module):
                 non_bert_params.append(_param)
         return non_bert_params
 
+@registry.register("model", "BayesEncDecV2")
+class BSemiBatchedEncDecModel(torch.nn.Module):
+    """
+    Bayesian Meta Learning Encoder 
+    Encoder is batched but decoder is unbatched, this is for Spider
+    """
+
+    Preproc = EncDecPreproc
+
+    def __init__(self, preproc, device, encoder, decoder, num_particles):
+        super().__init__()
+        self.preproc = preproc
+        self.list_of_encoders = torch.nn.ModuleList()
+        for i in range(num_particles):
+            encoder = registry.construct(
+                "encoder", encoder, device=device, preproc=preproc.enc_preproc
+            )
+            self.list_of_encoders.append(encoder)
+            
+        self.decoder = registry.construct(
+            "decoder", decoder, device=device, preproc=preproc.dec_preproc
+        )
+
+        assert getattr(self.encoder, "batched")  # use batched enc by default
+
+    def forward(self, *input_items, compute_loss=True, infer=False):
+        """
+        The only entry point. In this unbatched version, input_items is 
+        the input_batch during training; it is a tuple (orig_item, preproc_item)
+        during inference time.
+        Args:
+            input_items: if it is a list, then we infer that it is a batch
+            of examples for training; if is not a single list, then we infer
+            that it's in inference mode
+        """
+        ret_dic = {}
+        if compute_loss:
+            assert len(input_items) == 1  # it's a batched version
+            input_item = input_items[0]
+            # manually encode
+            enc_states = self.encoder([enc_input for enc_input, dec_output in batch])
+            loss = self._compute_loss_enc_batched(input_items[0])
+            ret_dic["loss"] = loss
+
+        if infer:
+            assert len(input_items) == 2  # unbatched version of inference
+            orig_item, preproc_item = input_items
+            infer_dic = self.begin_inference(orig_item, preproc_item)
+            ret_dic = {**ret_dic, **infer_dic}
+        return ret_dic
+
+    def _compute_loss_enc_batched(self, batch, enc_states):
+        """
+        Default way of computing loss: enc returns a list, 
+        dec process enc outputs sequentially
+        """
+        losses = []
+
+        for enc_state, (enc_input, dec_output) in zip(enc_states, batch):
+            ret_dic = self.decoder(dec_output, enc_state)
+            losses.append(ret_dic["loss"])
+        return torch.mean(torch.stack(losses, dim=0), dim=0)
+
+    def begin_inference(self, orig_item, preproc_item):
+        enc_input, _ = preproc_item
+        (enc_state,) = self.encoder([enc_input])
+        return self.decoder(orig_item, enc_state, compute_loss=False, infer=True)
+
+    def get_trainable_parameters(self):
+        return filter(lambda p: p.requires_grad, self.parameters())
+
+    def get_bert_parameters_legacy(self):
+        bert_params = list(self.encoder.bert_model.parameters())
+        assert len(bert_params) > 0
+        return bert_params
+
+    def get_bert_parameters(self):
+        bert_params = []
+        for name, _param in self.named_parameters():
+            if "bert" in name:
+                bert_params.append(_param)
+        return bert_params
+
+    def get_non_bert_parameters(self):
+        non_bert_params = []
+        bert_params = set(self.get_bert_parameters())
+        for name, _param in self.named_parameters():
+            if _param not in bert_params:
+                # if "bert" not in name:
+                non_bert_params.append(_param)
+        return non_bert_params
 
 @registry.register("model", "UnBatchedEncDec")
 class UnBatchedEncDecModel(torch.nn.Module):
