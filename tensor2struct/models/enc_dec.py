@@ -4,6 +4,7 @@ import torch.utils.data
 
 from tensor2struct.models import abstract_preproc
 from tensor2struct.utils import registry
+from tensor2struct.modules import rat
 
 import logging
 
@@ -187,16 +188,38 @@ class BSemiBatchedEncDecModel(torch.nn.Module):
 
     Preproc = EncDecPreproc
 
-    def __init__(self, preproc, device, encoder, decoder, num_particles):
+    def __init__(self, 
+                 preproc, 
+                 device, 
+                 encoder, 
+                 decoder, 
+                 num_particles=2,
+                 linking_config={}):
         super().__init__()
-        self.preproc = preproc
+        self.encoder_preproc = preproc.enc_preproc
+        self.num_particles = num_particles
         self.list_of_encoders = torch.nn.ModuleList()
         for i in range(num_particles):
             encoder = registry.construct(
-                "encoder", encoder, device=device, preproc=preproc.enc_preproc
+                "encoder", encoder, device=device, preproc=self.encoder_preproc
             )
             self.list_of_encoders.append(encoder)
             
+        # initialization for encoder return state
+        # matching 
+        # todo: remember to check the linking config
+        self.schema_linking = registry.construct(
+            "schema_linking", linking_config, preproc=self.encoder_preproc, device=device,
+        )
+        
+         # aligner
+        self.aligner = rat.AlignmentWithRAT(
+            device=device,
+            hidden_size=self.list_of_encoders[0].enc_hidden_size,
+            relations2id=self.encoder_preproc.relations2id,
+            enable_latent_relations=False,
+        )
+        
         self.decoder = registry.construct(
             "decoder", decoder, device=device, preproc=preproc.dec_preproc
         )
@@ -214,12 +237,70 @@ class BSemiBatchedEncDecModel(torch.nn.Module):
             that it's in inference mode
         """
         ret_dic = {}
+        input_item = input_items[0]
+        enc_states = []
+        column_pointer_maps = [
+            {i: [i] for i in range(len(desc["columns"]))} for desc in input_item
+        ]
+        table_pointer_maps = [
+            {i: [i] for i in range(len(desc["tables"]))} for desc in input_item
+        ]
+        for batch_idx, (enc_input, _) in enumerate(input_item):
+            q_particle_list = []
+            c_particle_list = []
+            t_particle_list = []
+            relation = self.schema_linking(enc_input)
+            for i in range(self.num_particles):
+                (
+                    q_enc_new_item,
+                    c_enc_new_item,
+                    t_enc_new_item,
+                ) = self.list_of_encoders[i](enc_input)
+                q_particle_list.append(q_enc_new_item)
+                c_particle_list.append(c_enc_new_item)
+                t_particle_list.append(t_enc_new_item)
+                
+            q_enc_new_item = torch.stack(q_particle_list, dim=0).mean(dim=0)
+            c_enc_new_item = torch.stack(c_particle_list, dim=0).mean(dim=0)
+            t_enc_new_item = torch.stack(t_particle_list, dim=0).mean(dim=0)
+            
+            # attention memory 
+            memory = []
+            include_in_memory = self.list_of_encoders[0]
+            if "question" in include_in_memory:
+                memory.append(q_enc_new_item)
+            if "column" in include_in_memory:
+                memory.append(c_enc_new_item)
+            if "table" in include_in_memory:
+                memory.appenđ(t_enc_new_item)
+            
+            # alignment matrix
+            align_mat_item = self.aligner(
+                enc_input, q_enc_new_item, c_enc_new_item, t_enc_new_item, relation
+            )
+        
+            enc_states.append(
+                SpiderEncoderState(
+                    state=None,
+                    words_for_copying=enc_input["question_for_copying"],
+                    memory=memory,
+                    question_memory=q_enc_new_item,
+                    schema_memory=torch.cat((c_enc_new_item, t_enc_new_item), dim=1),
+                    pointer_memories={
+                        "column": c_enc_new_item,
+                        "table": t_enc_new_item,
+                    },
+                    pointer_maps={
+                        "column": column_pointer_maps[batch_idx],
+                        "table": table_pointer_maps[batch_idx],
+                    },
+                    m2c_align_mat=align_mat_item[0],
+                    m2t_align_mat=align_mat_item[1],
+                )
+            )
         if compute_loss:
             assert len(input_items) == 1  # it's a batched version
-            input_item = input_items[0]
-            # manually encode
-            enc_states = self.encoder([enc_input for enc_input, dec_output in batch])
-            loss = self._compute_loss_enc_batched(input_items[0])
+            loss = self._compute_loss_enc_batched(input_items[0], enc_states)
             ret_dic["loss"] = loss
 
         if infer:

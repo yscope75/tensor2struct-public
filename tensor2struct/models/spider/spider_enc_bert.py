@@ -532,35 +532,20 @@ class SpiderEncoderBertTruncated(torch.nn.Module):
         #    len(self.tokenizer)
         # )  # several tokens added
 
-    def forward(self, descs):
+    def forward(self, desc):
         # TODO: abstract the operations of batching for bert
         batch_token_lists = []
-        batch_id_to_retrieve_question = []
-        batch_id_to_retrieve_column = []
-        batch_id_to_retrieve_table = []
-        if self.summarize_header == "avg":
-            batch_id_to_retrieve_column_2 = []
-            batch_id_to_retrieve_table_2 = []
-        long_seq_set = set()
-        batch_id_map = {}  # some long examples are not included
 
-        # 1) retrieve bert pre-trained embeddings
-        for batch_idx, desc in enumerate(descs):
-            qs = self.tokenizer.text_to_ids(desc["question_text"], cls=True)
-            cols = [self.tokenizer.text_to_ids(c, cls=False) for c in desc["columns"]]
-            tabs = [self.tokenizer.text_to_ids(t, cls=False) for t in desc["tables"]]
+        qs = self.tokenizer.text_to_ids(desc["question_text"], cls=True)
+        cols = [self.tokenizer.text_to_ids(c, cls=False) for c in desc["columns"]]
+        tabs = [self.tokenizer.text_to_ids(t, cls=False) for t in desc["tables"]]
 
-            token_list = (
-                qs + [c for col in cols for c in col] + [t for tab in tabs for t in tab]
-            )
-            assert self.tokenizer.check_bert_input_seq(token_list)
-            if "phobert" in self.bert_version and len(token_list) > 256:
-                long_seq_set.add(batch_idx)
-                continue
-
-            elif len(token_list) > 512:
-                long_seq_set.add(batch_idx)
-                continue
+        token_list = (
+            qs + [c for col in cols for c in col] + [t for tab in tabs for t in tab]
+        )
+        assert self.tokenizer.check_bert_input_seq(token_list)
+        if ("phobert" in self.bert_version and 
+            len(token_list) <= 256) or len(token_list) <= 512:
 
             q_b = len(qs)
             col_b = q_b + sum(len(c) for c in cols)
@@ -587,22 +572,14 @@ class SpiderEncoderBertTruncated(torch.nn.Module):
 
             # add index for retrieving representations
             question_rep_ids = torch.LongTensor(question_indexes).to(self._device)
-            batch_id_to_retrieve_question.append(question_rep_ids)
             column_rep_ids = torch.LongTensor(column_indexes).to(self._device)
-            batch_id_to_retrieve_column.append(column_rep_ids)
             table_rep_ids = torch.LongTensor(table_indexes).to(self._device)
-            batch_id_to_retrieve_table.append(table_rep_ids)
             if self.summarize_header == "avg":
                 assert all(i2 >= i1 for i1, i2 in zip(column_indexes, column_indexes_2))
                 column_rep_ids_2 = torch.LongTensor(column_indexes_2).to(self._device)
-                batch_id_to_retrieve_column_2.append(column_rep_ids_2)
                 assert all(i2 >= i1 for i1, i2 in zip(table_indexes, table_indexes_2))
                 table_rep_ids_2 = torch.LongTensor(table_indexes_2).to(self._device)
-                batch_id_to_retrieve_table_2.append(table_rep_ids_2)
 
-            batch_id_map[batch_idx] = len(batch_id_map)
-
-        if len(long_seq_set) < len(descs):
             (
                 padded_token_lists,
                 att_mask_lists,
@@ -625,34 +602,23 @@ class SpiderEncoderBertTruncated(torch.nn.Module):
 
             enc_output = bert_output
 
-        # assert len(long_seq_set) == 0  # remove them for now
+            # assert len(long_seq_set) == 0  # remove them for now
 
-        # 2) rat update
-        # retrieve representations
-        if batch_idx in long_seq_set:
-            q_enc, col_enc, tab_enc = self.encoder_long_seq(desc) 
-        else:
-            bert_batch_idx = batch_id_map[batch_idx]
-            q_enc = enc_output[bert_batch_idx][
-                batch_id_to_retrieve_question[bert_batch_idx]
-            ]
-            col_enc = enc_output[bert_batch_idx][
-                batch_id_to_retrieve_column[bert_batch_idx]
-            ]
-            tab_enc = enc_output[bert_batch_idx][
-                batch_id_to_retrieve_table[bert_batch_idx]
-            ]
+            # 2) rat update
+            # retrieve representations
+            plm_output = enc_output[0]
+            q_enc = plm_output[question_rep_ids]
+            col_enc = plm_output[column_rep_ids]
+            tab_enc = plm_output[table_rep_ids]
 
             if self.summarize_header == "avg":
-                col_enc_2 = enc_output[bert_batch_idx][
-                    batch_id_to_retrieve_column_2[bert_batch_idx]
-                ]
-                tab_enc_2 = enc_output[bert_batch_idx][
-                    batch_id_to_retrieve_table_2[bert_batch_idx]
-                ]
+                col_enc_2 = enc_output[0][column_rep_ids_2]
+                tab_enc_2 = enc_output[0][table_rep_ids_2]
 
                 col_enc = (col_enc + col_enc_2) / 2.0  # avg of first and last token
                 tab_enc = (tab_enc + tab_enc_2) / 2.0  # avg of first and last token
+        else:
+            q_enc, col_enc, tab_enc = self.encoder_long_seq(desc) 
 
         words_for_copying = desc["question_for_copying"]
         assert q_enc.size()[0] == len(words_for_copying)
