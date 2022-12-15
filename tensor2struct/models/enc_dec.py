@@ -240,10 +240,10 @@ class BSemiBatchedEncDecModel(torch.nn.Module):
         input_item = input_items[0]
         enc_states = []
         column_pointer_maps = [
-            {i: [i] for i in range(len(desc["columns"]))} for desc in input_item
+            {i: [i] for i in range(len(desc["columns"]))} for desc, _ in input_item
         ]
         table_pointer_maps = [
-            {i: [i] for i in range(len(desc["tables"]))} for desc in input_item
+            {i: [i] for i in range(len(desc["tables"]))} for desc, _ in input_item
         ]
         for batch_idx, (enc_input, _) in enumerate(input_item):
             q_particle_list = []
