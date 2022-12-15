@@ -249,7 +249,6 @@ class BSemiBatchedEncDecModel(torch.nn.Module):
             q_particle_list = []
             c_particle_list = []
             t_particle_list = []
-            relation = self.schema_linking(enc_input)
             for i in range(self.num_particles):
                 (
                     q_enc_new_item,
@@ -264,6 +263,7 @@ class BSemiBatchedEncDecModel(torch.nn.Module):
             c_enc_new_item = torch.stack(c_particle_list, dim=0).mean(dim=0)
             t_enc_new_item = torch.stack(t_particle_list, dim=0).mean(dim=0)
             
+            relation = self.schema_linking(enc_input)
             # attention memory 
             memory = []
             include_in_memory = self.list_of_encoders[0]
@@ -272,7 +272,7 @@ class BSemiBatchedEncDecModel(torch.nn.Module):
             if "column" in include_in_memory:
                 memory.append(c_enc_new_item)
             if "table" in include_in_memory:
-                memory.appenđ(t_enc_new_item)
+                memory.append(t_enc_new_item)
             
             # alignment matrix
             align_mat_item = self.aligner(
