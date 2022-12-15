@@ -224,7 +224,7 @@ class BSemiBatchedEncDecModel(torch.nn.Module):
             "decoder", decoder, device=device, preproc=preproc.dec_preproc
         )
 
-        assert getattr(self.encoder, "batched")  # use batched enc by default
+        assert getattr(self.list_of_encoders[0], "batched")  # use batched enc by default
 
     def forward(self, *input_items, compute_loss=True, infer=False):
         """
