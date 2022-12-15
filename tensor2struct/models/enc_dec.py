@@ -200,10 +200,10 @@ class BSemiBatchedEncDecModel(torch.nn.Module):
         self.num_particles = num_particles
         self.list_of_encoders = torch.nn.ModuleList()
         for i in range(num_particles):
-            encoder = registry.construct(
+            particle_encoder = registry.construct(
                 "encoder", encoder, device=device, preproc=self.encoder_preproc
             )
-            self.list_of_encoders.append(encoder)
+            self.list_of_encoders.append(particle_encoder)
             
         # initialization for encoder return state
         # matching 
