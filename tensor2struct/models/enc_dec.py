@@ -286,6 +286,7 @@ class BSemiBatchedEncDecModel(torch.nn.Module):
                 SpiderEncoderState(
                     state=None,
                     words_for_copying=enc_input["question_for_copying"],
+                    tokenizer=self.list_of_encoders[0].tokenizer,
                     memory=memory,
                     question_memory=q_enc_new_item,
                     schema_memory=torch.cat((c_enc_new_item, t_enc_new_item), dim=1),
