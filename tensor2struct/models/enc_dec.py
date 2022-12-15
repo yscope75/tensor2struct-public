@@ -269,7 +269,7 @@ class BSemiBatchedEncDecModel(torch.nn.Module):
             
             # attention memory 
             memory = []
-            include_in_memory = self.list_of_encoders[0]
+            include_in_memory = self.list_of_encoders[0].include_in_memory
             if "question" in include_in_memory:
                 memory.append(q_enc_new_item)
             if "column" in include_in_memory:
