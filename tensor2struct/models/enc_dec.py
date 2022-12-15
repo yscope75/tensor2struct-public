@@ -276,7 +276,7 @@ class BSemiBatchedEncDecModel(torch.nn.Module):
                 memory.append(c_enc_new_item)
             if "table" in include_in_memory:
                 memory.append(t_enc_new_item)
-            
+            memory = torch.cat(memory, dim=1)
             # alignment matrix
             align_mat_item = self.aligner(
                 enc_input, q_enc_new_item, c_enc_new_item, t_enc_new_item, relation
