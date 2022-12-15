@@ -533,7 +533,7 @@ class SpiderEncoderBertTruncated(torch.nn.Module):
         #    len(self.tokenizer)
         # )  # several tokens added
 
-    def forward(self, desc):
+    def forward(self, desc, relation):
         # TODO: abstract the operations of batching for bert
         batch_token_lists = []
 
@@ -621,14 +621,14 @@ class SpiderEncoderBertTruncated(torch.nn.Module):
         else:
             q_enc, col_enc, tab_enc = self.encoder_long_seq(desc) 
 
-        words_for_copying = desc["question_for_copying"]
+        
         assert q_enc.size()[0] == len(words_for_copying)
         assert col_enc.size()[0] == len(desc["columns"])
         assert tab_enc.size()[0] == len(desc["tables"])
 
         # rat update
         # TODO: change this, question is in the protocal of build relations
-        desc["question"] = words_for_copying
+        
         (
             q_enc_new_item,
             c_enc_new_item,

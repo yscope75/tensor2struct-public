@@ -245,16 +245,20 @@ class BSemiBatchedEncDecModel(torch.nn.Module):
         table_pointer_maps = [
             {i: [i] for i in range(len(desc["tables"]))} for desc, _ in input_item
         ]
+        
         for batch_idx, (enc_input, _) in enumerate(input_item):
             q_particle_list = []
             c_particle_list = []
             t_particle_list = []
+            words_for_copying = enc_input["question_for_copying"]
+            enc_input["question"] = words_for_copying
+            relation = self.schema_linking(enc_input)
             for i in range(self.num_particles):
                 (
                     q_enc_new_item,
                     c_enc_new_item,
                     t_enc_new_item,
-                ) = self.list_of_encoders[i](enc_input)
+                ) = self.list_of_encoders[i](enc_input, relation)
                 q_particle_list.append(q_enc_new_item)
                 c_particle_list.append(c_enc_new_item)
                 t_particle_list.append(t_enc_new_item)
@@ -263,7 +267,6 @@ class BSemiBatchedEncDecModel(torch.nn.Module):
             c_enc_new_item = torch.stack(c_particle_list, dim=0).mean(dim=0)
             t_enc_new_item = torch.stack(t_particle_list, dim=0).mean(dim=0)
             
-            relation = self.schema_linking(enc_input)
             # attention memory 
             memory = []
             include_in_memory = self.list_of_encoders[0]
