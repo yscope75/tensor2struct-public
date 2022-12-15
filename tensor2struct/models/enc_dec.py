@@ -194,7 +194,7 @@ class BSemiBatchedEncDecModel(torch.nn.Module):
                  encoder, 
                  decoder, 
                  num_particles=2,
-                 linking_config={}):
+                 ):
         super().__init__()
         self.encoder_preproc = preproc.enc_preproc
         self.num_particles = num_particles
@@ -209,7 +209,7 @@ class BSemiBatchedEncDecModel(torch.nn.Module):
         # matching 
         # todo: remember to check the linking config
         self.schema_linking = registry.construct(
-            "schema_linking", linking_config, preproc=self.encoder_preproc, device=device,
+            "schema_linking", self.list_of_encoders[0].linking_config, preproc=self.encoder_preproc, device=device,
         )
         
          # aligner
