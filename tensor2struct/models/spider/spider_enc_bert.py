@@ -622,7 +622,7 @@ class SpiderEncoderBertTruncated(torch.nn.Module):
             q_enc, col_enc, tab_enc = self.encoder_long_seq(desc) 
 
         
-        assert q_enc.size()[0] == len(words_for_copying)
+        assert q_enc.size()[0] == len(desc["question_for_copying"])
         assert col_enc.size()[0] == len(desc["columns"])
         assert tab_enc.size()[0] == len(desc["tables"])
 
