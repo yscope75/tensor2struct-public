@@ -497,6 +497,7 @@ class SpiderEncoderBertTruncated(torch.nn.Module):
         self.preproc = preproc
         self.bert_version = bert_version
         self.bert_token_type = bert_token_type
+        self.linking_config = linking_config
         self.base_enc_hidden_size = (
             1024 if "large" in bert_version else 768
         )
