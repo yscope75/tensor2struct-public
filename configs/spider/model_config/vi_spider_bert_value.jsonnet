@@ -29,10 +29,14 @@ function(args, data_path=_data_path) spider_base(args, data_path=_data_path) {
 
     },
     model+:{
-        encoder: {
-            name: 'spider-bert',
+        bert_model: {
+            name: 'bert-encoder',
             bert_version: $.args.bert_version,
             bert_token_type: $.args.bert_token_type,
+        },
+        encoder: {
+            name: 'spider-bert-truncatedV2',
+            bert_version: $.args.bert_version,
             linking_config: {
                 name: "spider_string_matching",
             },
