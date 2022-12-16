@@ -426,7 +426,7 @@ class BSemiBatchedEncDecModelV2(torch.nn.Module):
         table_pointer_maps = [
             {i: [i] for i in range(len(desc["tables"]))} for desc, _ in input_item
         ]
-        plm_output = self.encoder([enc_input for enc_input, dec_output in input_item])
+        plm_output = self.bert_model([enc_input for enc_input, dec_output in input_item])
         
         for batch_idx, (enc_input, _) in enumerate(input_item):
             
