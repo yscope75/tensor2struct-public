@@ -183,8 +183,8 @@ class BayesModelAgnosticMetaLearning(nn.Module):
                 if g_o is not None:
                     p.grad.data.add_(g_o.data)
                     
-        final_loss = inner_loss + mean_outer_loss
-        ret_dic["loss"] = final_loss.item()
+        final_loss = inner_loss + mean_outer_loss.item()
+        ret_dic["loss"] = final_loss
         del inner_model
         import gc
 
