@@ -24,8 +24,9 @@ class MetaTrainConfig(train.TrainConfig):
     inner_opt = attr.ib(kw_only=True)
     first_order = attr.ib(kw_only=True, default=False)
     data_scheduler = attr.ib(kw_only=True)
-
-
+    num_particles = attr.ib(deafult=2)
+    inner_lr = attr.ib(default=5e-4)
+    
 class MetaTrainer(train.Trainer):
     def load_train_config(self):
         self.train_config = registry.instantiate(

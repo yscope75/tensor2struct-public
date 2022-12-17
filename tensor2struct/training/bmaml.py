@@ -1,138 +1,194 @@
-import copy
-import torch 
-import higher
-import torch.nn as nn 
+import attr
+import math
+import torch
+import torch.nn as nn
 import numpy as np
+import torch.autograd as autograd 
+import collections
+
+import copy
 import logging
 
-class BayesianMLDG(nn.Module):
-    def __init__(
-        self,
-        base_model,
-        config
-    ):
-        # todo: refer rat config 
-        super().__init__()
-        assert config.num_particles >= 2, ValueError("At least 2 particle")
-        self.config = config 
-        self.base_model_dict = base_model.state_dict()
-        self.parameter_shapes = []
-        # not include SVGD for bert
-        for key in self.base_model_dict:
-            if 'bert' not in key:
-                self.parameter_shapes.append(self.base_model_dict[key].shape)
-            
-        self.params = nn.ParameterList(parameters=None)
-        
-        # init params for each model
-        for _ in range(self.config.num_particles):
-            params_list = self.init_params(state_dict=self.base_model_dict)
-            params_vector = nn.utils.parameters_to_vector(parameters=params_list) 
-            self.params.append(parameter=nn.Parameter(data=params_vector))
-            
-        # num of params used for computing distance
-        self.num_base_params = self.params[0].size(0)
-    
-    def init_params(self, state_dict):
-        params = [state_dict[key] for key in state_dict if 'bert' not in key]
-        params = []
-        for key in state_dict:
-            if 'bert' not in key:
-                param = state_dict[key]
-                if param.ndim > 1:
-                    torch.nn.init.xavier_normal_(param)
-                else:
-                    torch.nn.init.zeros_(param)
-                params.append(param)
-            else:
-                param = copy.deepcopy(param)
+logger = logging.getLogger("tensor2struct")
 
-        return params 
-    def vector_to_list_params(self, params_vec):
-        params = []
-        # pointer for each layer params
-        pointer = 0 
-        
-        for param_shape in self.params_shapes:
-            # total number of params each layer
-            num_params = int(np.prod(param_shape))
-            
-            params.append(params_vec[pointer:pointer+num_params].view(param_shape))
-            
-            pointer += num_params
+# Todo: move this class for universal use
+@attr.s
+class SpiderEncoderState:
+    state = attr.ib()
+    memory = attr.ib()
+    question_memory = attr.ib()
+    schema_memory = attr.ib()
+    words_for_copying = attr.ib()
 
-        return params
-    
-    def forward(self, particle_id):
-        
-        particle_params = self.vector_to_list_params(self.params[particle_id])
-        return particle_params
-            
-class BayesianDGAgnosticMetaLearning(nn.Module):
+    pointer_memories = attr.ib()
+    pointer_maps = attr.ib()
+
+    m2c_align_mat = attr.ib()
+    m2t_align_mat = attr.ib()
+
+    # for copying
+    tokenizer = attr.ib()
+
+    def find_word_occurrences(self, token):
+        occurrences = [i for i, w in enumerate(self.words_for_copying) if w == token]
+        if len(occurrences) > 0:
+            return occurrences[0]
+        else:
+            return None
+
+class BayesModelAgnosticMetaLearning(nn.Module):
     def __init__(
         self, 
-        inner_opt=None,
-        device=None,
-        f_model=None,
-        config=None
+        inner_lr,
+        model=None, 
+        first_order=False, 
+        device=None, 
+        num_particles=2,
     ):
         super().__init__()
-        self.inner_opt = inner_opt
+        self.inner_lr = inner_lr
+        self.first_order = first_order
         self.inner_steps = 1
+        self.num_particles = num_particles
         self.device = device
-        self.config = config
-        self.f_model = f_model
-        
-    def bdgmaml_train(self, hyper_model, inner_batch, outer_batch):
-        assert hyper_model.trainning
-        ret_dict = {}
-        
-        # create stateless essemble model
-        f_ensemble_model = higher.patch.monkeypatch(
-            module=hyper_model,
-            copy_initial_weights=False,
-            track_higher_grads=self.config.track_higher_grads
-        )
-        # use for updating ensemble model later
-        ensemble_params = torch.stack(tensors=[p for p in hyper_model.parameters()])
-        
-        ret_dict = {}
-        for _step in range(self.inner_steps):
-            
-            # create matrix for computing distance
-            distance_NLL = torch.empty(
-                size=(self.config.num_particles, 
-                      hyper_model.num_base_params), 
-                device=self.device)
-            for particle_id in range(self.config.num_particles):
-                particle_params = f_ensemble_model.forward(particle_id=particle_id)
-                particle_ret_dict = self.f_model(inner_batch, params=particle_params)
-                particle_loss = particle_ret_dict["loss"]
-                
-                if self.config.first_order:
-                    grads = torch.autograd.grad(
-                        outputs=particle_loss,
-                        inputs=f_ensemble_model.fast_params[particle_id],
-                        retain_graph=True
-                    )
-                else:
-                    grads = torch.autograd.grad(
-                        output=particle_loss,
-                        inputs=f_ensemble_model.fast_params[particle_id],
-                        create_graph=True
-                    )
-                
-                distance_NLL[particle_id, :] = nn.utils.parameters_to_vector(parameters=grads)
 
-            # compute kernel distances and grads
-            kernel_matrix, grad_kernel, _ = self.get_kernel(params=ensemble_params)
+    def get_inner_opt_params(self):
+        """
+        Equvalent to self.parameters()
+        """
+        return []
+
+    def meta_train(self, model, model_encoder_params, inner_batch, outer_batches):
+        assert not self.first_order
+        return self.maml_train(model, model_encoder_params, inner_batch, outer_batches)
+
+    def maml_train(self, 
+                   model, 
+                   model_encoder_params,
+                   inner_batch, 
+                   outer_batches):
+        assert model.training
+        # clone model for inner gradients computing
+        inner_model = copy.deepcopy(self.model)
+        inner_encoder_params = []
+        for i in range(self.train_config.num_of_particles):
+            inner_encoder_params.append(list(inner_model.list_of_encodes[i].parameters()))
+        inner_params_matrix = torch.stack(
+            [torch.nn.utils.parameters_to_vector(params) for params in inner_encoder_params],
+            dim=0
+        )
+        ret_dic = {}
+        for _step in range(self.inner_steps):
+            # for computing distance 
+            distance_nll = torch.empty(size=(self.num_particles,
+                                             inner_params_matrix.size(1)),
+                                       device=self.device)
             
-            q_params = q_params - self.config.inner_lr * (torch.matmul(kernel_matrix, distance_NLL) - grad_kernel)
+            input_item = inner_batch[0]
+            column_pointer_maps = [
+                {i: [i] for i in range(len(desc["columns"]))} for desc, _ in input_item
+            ]
+            table_pointer_maps = [
+                {i: [i] for i in range(len(desc["tables"]))} for desc, _ in input_item
+            ]
+            plm_output = inner_model.bert_model([enc_input for enc_input, dec_output in input_item])
+            inner_loss = []
+            for i in range(self.num_particles):
+                enc_states = []
+                for batch_idx, (enc_input, _) in enumerate(input_item):
+                
+                    relation = inner_model.schema_linking(enc_input)
+                    (
+                        q_enc_new_item,
+                        c_enc_new_item,
+                        t_enc_new_item,
+                    ) = inner_model.list_of_encoders[i](enc_input, 
+                                                        plm_output[batch_idx],
+                                                        relation)
+                    # attention memory 
+                    memory = []
+                    include_in_memory = inner_model.list_of_encoders[0].include_in_memory
+                    if "question" in include_in_memory:
+                        memory.append(q_enc_new_item)
+                    if "column" in include_in_memory:
+                        memory.append(c_enc_new_item)
+                    if "table" in include_in_memory:
+                        memory.append(t_enc_new_item)
+                    memory = torch.cat(memory, dim=1)
+                    # alignment matrix
+                    align_mat_item = inner_model.aligner(
+                        enc_input, q_enc_new_item, c_enc_new_item, t_enc_new_item, relation
+                    )
             
-            f_ensemble_model.update_params(params)
+                    enc_states.append(
+                        SpiderEncoderState(
+                            state=None,
+                            words_for_copying=enc_input["question_for_copying"],
+                            tokenizer=inner_model.list_of_encoders[0].tokenizer,
+                            memory=memory,
+                            question_memory=q_enc_new_item,
+                            schema_memory=torch.cat((c_enc_new_item, t_enc_new_item), dim=1),
+                            pointer_memories={
+                                "column": c_enc_new_item,
+                                "table": t_enc_new_item,
+                            },
+                            pointer_maps={
+                                "column": column_pointer_maps[batch_idx],
+                                "table": table_pointer_maps[batch_idx],
+                            },
+                            m2c_align_mat=align_mat_item[0],
+                            m2t_align_mat=align_mat_item[1],
+                        )
+                    )
+
+                    loss = inner_model._compute_loss_enc_batched(input_item, enc_states)
+                    inner_loss.append(loss.item())
+                    particle_grads = torch.autograd.grad(loss, inner_encoder_params[i])
+                    distance_nll[i, :] = torch.nn.utils.parameters_to_vector(particle_grads)
+            
+            kernel_matrix, grad_kernel, _ = BayesModelAgnosticMetaLearning.get_kernel(params=inner_params_matrix,
+                                              num_of_particles=self.num_particles)
+            # compute inner gradients with rbf kernel
+            inner_grads = torch.matmul(kernel_matrix, distance_nll) + grad_kernel
+            # update inner_net parameters 
+            inner_non_bert_parmas_matrix = inner_non_bert_parmas_matrix - self.inner_lr*inner_grads
+            for i in range(self.num_particles):
+                torch.nn.utils.vector_to_parameters(inner_non_bert_parmas_matrix[i],
+                                                    inner_encoder_params[i])
+            # copy inner_grads to main network
+            for i in range(self.num_particles):
+                for p_tar, p_src in zip(model_encoder_params[i],
+                                        BayesModelAgnosticMetaLearning.vector_to_list_params(inner_grads[i],
+                                                                                             model_encoder_params[i])):
+                    p_tar.grad.data.add_(p_src) # todo: divide by num_of_sample if inner is in ba
+                
+        logger.info(f"Inner loss: {sum(inner_loss)/self.num_particles}")
+        for p_tgt, p_src in zip(model.parameters(),
+                                inner_model.parameters()):
+            if p_src.grad is not None:
+                p_tgt.grad.data.add_(p_src.grad.data)
+        # Compute loss on udpated inner model
+        mean_outer_loss = torch.Tensor([0.0]).to(self.device)
+        for outer_batch in outer_batches:
+            outer_ret_dict = inner_model(outer_batch)
+            mean_outer_loss += outer_ret_dict["loss"]
+        mean_outer_loss.div_(len(outer_batches))
+        logger.info(f"Outer loss: {mean_outer_loss.item()}")
         
-        
-    def get_kernel(self, params: torch.Tensor):
+        # compute gradients of outer loss
+        grad_outer = autograd.grad(mean_outer_loss, 
+                                   inner_model.parameters(),
+                                   allow_unused=True)
+        for p, g_o in zip(model.parameters(), grad_outer):
+                if g_o is not None:
+                    p.grad.data.add_(g_o.data)
+                    
+        final_loss = inner_loss + mean_outer_loss
+        ret_dic["loss"] = final_loss.item()
+        return ret_dic
+    
+    @staticmethod
+    def get_kernel(params: torch.Tensor, num_of_particles):
         """
         Compute the RBF kernel for the input
         
@@ -141,10 +197,10 @@ class BayesianDGAgnosticMetaLearning(nn.Module):
         
         Returns: kernel_matrix = tensor of shape (N, N)
         """
-        pairwise_d_matrix = self.get_pairwise_distance_matrix(x=params)
+        pairwise_d_matrix = BayesModelAgnosticMetaLearning.get_pairwise_distance_matrix(x=params)
 
         median_dist = torch.quantile(input=pairwise_d_matrix, q=0.5)  # tf.reduce_mean(euclidean_dists) ** 2
-        h = median_dist / np.log(self.config.num_particles)
+        h = median_dist / np.log(num_of_particles)
 
         kernel_matrix = torch.exp(-pairwise_d_matrix / h)
         kernel_sum = torch.sum(input=kernel_matrix, dim=1, keepdim=True)
@@ -180,3 +236,24 @@ class BayesianDGAgnosticMetaLearning(nn.Module):
         pairwise_d_matrix[triu_indices[0], triu_indices[1]] = euclidean_dists
 
         return pairwise_d_matrix
+    
+    @staticmethod
+    def vector_to_list_params(vector, other_params):
+    
+        params = []
+        
+        # pointer for each layer params
+        pointer = 0 
+        
+        for param in other_params:
+            # total number of params each layer
+            num_params = int(np.prod(param.shape))
+            
+            params.append(vector[pointer:pointer+num_params].view(param.shape))
+            
+            pointer += num_params
+
+        return params
+    
+BMAML = BayesModelAgnosticMetaLearning
+
