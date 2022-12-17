@@ -30,7 +30,7 @@ class MetaTrainConfig:
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "mode", choices=["train", "meta_train",], help="train/meta_train/dist_train",
+        "mode", choices=["train", "meta_train", "bayesian_meta_train"], help="train/meta_train/dist_train",
     )
     parser.add_argument("exp_config_file", help="jsonnet file for experiments")
     args = parser.parse_args()
@@ -55,13 +55,13 @@ def main():
     project = exp_config["project"]
 
     # dist train need to start a wandb session in each process, not a global one
-    if args.mode in ["train", "meta_train"]:
+    if args.mode in ["train", "meta_train", "bayesian_meta_train"]:
         wandb.init(project=project, group=expname, job_type=args.mode)
 
     if args.mode == "train":
         train_config = TrainConfig(model_config_file, model_config_args, logdir)
         train.main(train_config)
-    elif args.mode == "meta_train":
+    elif args.mode == "meta_train" or args.mode == "bayesian_meta_train":
         train_config = MetaTrainConfig(model_config_file, model_config_args, logdir)
         meta_train.main(train_config)
 
