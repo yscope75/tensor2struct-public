@@ -20,12 +20,12 @@ from tensor2struct.utils import saver as saver_mod
 
 @attr.s
 class MetaTrainConfig(train.TrainConfig):
+    num_particles = attr.ib(default=2)
+    inner_lr = attr.ib(default=5e-4)
     # kw_only is required for inheritance
     inner_opt = attr.ib(kw_only=True)
     first_order = attr.ib(kw_only=True, default=False)
     data_scheduler = attr.ib(kw_only=True)
-    num_particles = attr.ib(default=2)
-    inner_lr = attr.ib(default=5e-4)
     
 class MetaTrainer(train.Trainer):
     def load_train_config(self):
