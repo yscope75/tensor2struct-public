@@ -185,6 +185,10 @@ class BayesModelAgnosticMetaLearning(nn.Module):
                     
         final_loss = inner_loss + mean_outer_loss
         ret_dic["loss"] = final_loss.item()
+        del inner_model
+        import gc
+
+        gc.collect()
         return ret_dic
     
     @staticmethod
