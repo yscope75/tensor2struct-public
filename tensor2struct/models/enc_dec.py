@@ -418,17 +418,42 @@ class BSemiBatchedEncDecModelV2(torch.nn.Module):
             that it's in inference mode
         """
         ret_dic = {}
-        input_item = input_items[0]
+        
+        if compute_loss:
+            assert len(input_items) == 1  # it's a batched version
+            loss = self._compute_loss_enc_batched(input_items[0])
+            ret_dic["loss"] = loss
+
+        if infer:
+            assert len(input_items) == 2  # unbatched version of inference
+            orig_item, preproc_item = input_items
+            infer_dic = self.begin_inference(orig_item, preproc_item)
+            ret_dic = {**ret_dic, **infer_dic}
+        return ret_dic
+
+    def _compute_loss_enc_batched(self, batch):
+        """
+        Default way of computing loss: enc returns a list, 
+        dec process enc outputs sequentially
+        """
+        losses = []
+        enc_states = self._compute_enc_states([enc_input for enc_input, dec_output in batch])
+        for enc_state, (enc_input, dec_output) in zip(enc_states, batch):
+            ret_dic = self.decoder(dec_output, enc_state)
+            losses.append(ret_dic["loss"])
+        return torch.mean(torch.stack(losses, dim=0), dim=0)
+
+    def _compute_enc_states(self, enc_input):
         enc_states = []
         column_pointer_maps = [
-            {i: [i] for i in range(len(desc["columns"]))} for desc, _ in input_item
+            {i: [i] for i in range(len(desc["columns"]))} for desc, _ in enc_input
         ]
         table_pointer_maps = [
-            {i: [i] for i in range(len(desc["tables"]))} for desc, _ in input_item
+            {i: [i] for i in range(len(desc["tables"]))} for desc, _ in enc_input
         ]
-        plm_output = self.bert_model([enc_input for enc_input, dec_output in input_item])
+        plm_output = self.bert_model([enc_input for enc_input, dec_output in enc_input])
         
-        for batch_idx, (enc_input, _) in enumerate(input_item):
+        for batch_idx, (enc_input, _) in enumerate(enc_input):
             
             sample_embed = plm_output[batch_idx]
             q_particle_list = []
@@ -484,30 +509,9 @@ class BSemiBatchedEncDecModelV2(torch.nn.Module):
                     m2t_align_mat=align_mat_item[1],
                 )
             )
-        if compute_loss:
-            assert len(input_items) == 1  # it's a batched version
-            loss = self._compute_loss_enc_batched(input_items[0], enc_states)
-            ret_dic["loss"] = loss
-
-        if infer:
-            assert len(input_items) == 2  # unbatched version of inference
-            orig_item, preproc_item = input_items
-            infer_dic = self.begin_inference(orig_item, preproc_item)
-            ret_dic = {**ret_dic, **infer_dic}
-        return ret_dic
-
-    def _compute_loss_enc_batched(self, batch, enc_states):
-        """
-        Default way of computing loss: enc returns a list, 
-        dec process enc outputs sequentially
-        """
-        losses = []
-
-        for enc_state, (enc_input, dec_output) in zip(enc_states, batch):
-            ret_dic = self.decoder(dec_output, enc_state)
-            losses.append(ret_dic["loss"])
-        return torch.mean(torch.stack(losses, dim=0), dim=0)
-
+        
+        return enc_states
+    
     def begin_inference(self, orig_item, preproc_item):
         enc_input, _ = preproc_item
         (enc_state,) = self.encoder([enc_input])
