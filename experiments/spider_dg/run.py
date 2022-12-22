@@ -10,6 +10,7 @@ import wandb
 from experiments.spider_dg import (
     train,
     meta_train,
+    bayesian_meta_train,
 )
 
 
@@ -61,9 +62,12 @@ def main():
     if args.mode == "train":
         train_config = TrainConfig(model_config_file, model_config_args, logdir)
         train.main(train_config)
-    elif args.mode == "meta_train" or args.mode == "bayesian_meta_train":
+    elif args.mode == "meta_train":
         train_config = MetaTrainConfig(model_config_file, model_config_args, logdir)
         meta_train.main(train_config)
+    elif args.mode == "bayesian_meta_train":
+        train_config = MetaTrainConfig(model_config_file, model_config_args, logdir)
+        bayesian_meta_train.main(train_config)
 
 
 if __name__ == "__main__":
