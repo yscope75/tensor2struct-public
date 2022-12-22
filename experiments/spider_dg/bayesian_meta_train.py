@@ -16,7 +16,7 @@ import wandb
 
 from tensor2struct.utils import registry, random_state, vocab
 from tensor2struct.utils import saver as saver_mod
-from tensor2struct.commands import train, bayesian_meta_train
+from tensor2struct.commands import train, meta_train, bayesian_meta_train
 from tensor2struct.training import bmaml
 
 
