@@ -437,7 +437,7 @@ class BSemiBatchedEncDecModelV2(torch.nn.Module):
         dec process enc outputs sequentially
         """
         losses = []
-        enc_states = self._compute_enc_states([enc_input for enc_input, dec_output in batch])
+        enc_states = self._compute_enc_states(batch)
         for enc_state, (enc_input, dec_output) in zip(enc_states, batch):
             ret_dic = self.decoder(dec_output, enc_state)
             losses.append(ret_dic["loss"])
@@ -513,8 +513,8 @@ class BSemiBatchedEncDecModelV2(torch.nn.Module):
         return enc_states
     
     def begin_inference(self, orig_item, preproc_item):
-        enc_input, _ = preproc_item
-        (enc_state,) = self.encoder([enc_input])
+        enc_input, dec = preproc_item
+        (enc_state,) = self._compute_enc_states([(enc_input, dec)])
         return self.decoder(orig_item, enc_state, compute_loss=False, infer=True)
 
     def get_trainable_parameters(self):
