@@ -29,7 +29,7 @@ function(args, data_path=_data_path) spider_base(args, data_path=_data_path) {
 
     },
     model+:{
-        name: ''BayesEncDecV2,
+        name: 'BayesEncDecV2',
         bert_model: {
             name: 'bert-encoder',
             bert_version: $.args.bert_version,
