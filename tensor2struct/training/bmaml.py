@@ -69,7 +69,7 @@ class BayesModelAgnosticMetaLearning(nn.Module):
                    outer_batches):
         assert model.training
         # clone model for inner gradients computing
-        inner_model = copy.deepcopy(self.model)
+        inner_model = copy.deepcopy(model)
         inner_encoder_params = []
         for i in range(self.train_config.num_of_particles):
             inner_encoder_params.append(list(inner_model.list_of_encodes[i].parameters()))
