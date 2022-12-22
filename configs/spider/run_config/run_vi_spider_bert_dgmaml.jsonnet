@@ -12,6 +12,7 @@
         sc_link: false,
         cv_link: false,
         loss_type: "softmax", # softmax, label_smooth
+        num_particles: 5,
 
         # bert
         opt: "torchAdamw",   # bertAdamw, torchAdamw

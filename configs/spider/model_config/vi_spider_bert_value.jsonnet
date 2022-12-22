@@ -29,6 +29,7 @@ function(args, data_path=_data_path) spider_base(args, data_path=_data_path) {
 
     },
     model+:{
+        name: ''BayesEncDecV2,
         bert_model: {
             name: 'bert-encoder',
             bert_version: $.args.bert_version,
@@ -74,6 +75,7 @@ function(args, data_path=_data_path) spider_base(args, data_path=_data_path) {
             min_freq: 32,
             value_tokenizer: $.model.encoder_preproc.bert_version,
         },
+        num_particles: $.args.num_particles,
 
     },
 
