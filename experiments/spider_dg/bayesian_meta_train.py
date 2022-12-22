@@ -16,7 +16,7 @@ import wandb
 
 from tensor2struct.utils import registry, random_state, vocab
 from tensor2struct.utils import saver as saver_mod
-from tensor2struct.commands import train, meta_train
+from tensor2struct.commands import train, bayesian_meta_train
 from tensor2struct.training import bmaml
 
 
@@ -25,7 +25,7 @@ class MetaTrainConfig(meta_train.MetaTrainConfig):
     use_bert_training = attr.ib(kw_only=True)
 
 
-class BayesianMetaTrainer(meta_train.MetaTrainer):
+class BayesianMetaTrainer(bayesian_meta_train.BMetaTrainer):
     def load_train_config(self):
         self.train_config = registry.instantiate(
             MetaTrainConfig, self.config["meta_train"]
