@@ -115,7 +115,7 @@ class BayesianMetaTrainer(bayesian_meta_train.BMetaTrainer):
                     p.grad = torch.zeros_like(p)
             model_encoder_params = []
             for i in range(self.train_config.num_particles):
-                model_encoder_params.append(list(self.model.list_of_encodes[i].parameters()))
+                model_encoder_params.append(list(self.model.list_of_encoders[i].parameters()))
                 
             for _i in range(self.train_config.num_batch_accumulated):
                 task = train_data_scheduler.get_batch(last_step)
