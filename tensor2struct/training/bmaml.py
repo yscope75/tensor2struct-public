@@ -203,12 +203,6 @@ class BayesModelAgnosticMetaLearning(nn.Module):
                                               num_of_particles=self.num_particles)
             # compute inner gradients with rbf kernel
             inner_grads = torch.matmul(kernel_matrix, distance_nll) + grad_kernel
-            # trying to free gpu memory 
-            # not sure it would help
-            del kernel_matrix
-            del grad_kernel
-            del distance_nll
-            torch.cuda.empty_cache()
             # update inner_net parameters 
             inner_params_matrix = inner_params_matrix - self.inner_lr*inner_grads
             for i in range(self.num_particles):
@@ -220,7 +214,14 @@ class BayesModelAgnosticMetaLearning(nn.Module):
                                         BayesModelAgnosticMetaLearning.vector_to_list_params(inner_grads[i],
                                                                                              model_encoder_params[i])):
                     p_tar.grad.data.add_(p_src) # todo: divide by num_of_sample if inner is in ba
-                
+            # trying to free gpu memory 
+            # not sure it would help
+            del kernel_matrix
+            del grad_kernel
+            del distance_nll
+            del inner_grads
+            torch.cuda.empty_cache()
+            
         logger.info(f"Inner loss: {sum(inner_loss)/self.num_particles}")
         for p_tgt, p_src in zip(model.parameters(),
                                 inner_model.parameters()):
@@ -245,8 +246,7 @@ class BayesModelAgnosticMetaLearning(nn.Module):
         final_loss = sum(inner_loss)/self.num_particles + mean_outer_loss.item()
         ret_dic["loss"] = final_loss
         del inner_model
-        import gc
-        gc.collect()
+        torch.cuda.empty_cache()
         return ret_dic
     
     @staticmethod
