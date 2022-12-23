@@ -207,6 +207,7 @@ class BayesModelAgnosticMetaLearning(nn.Module):
             # not sure it would help
             del kernel_matrix
             del grad_kernel
+            import gc
             gc.collect()
             # update inner_net parameters 
             inner_params_matrix = inner_params_matrix - self.inner_lr*inner_grads
@@ -244,7 +245,6 @@ class BayesModelAgnosticMetaLearning(nn.Module):
         final_loss = sum(inner_loss)/self.num_particles + mean_outer_loss.item()
         ret_dic["loss"] = final_loss
         del inner_model
-        import gc
 
         gc.collect()
         return ret_dic
