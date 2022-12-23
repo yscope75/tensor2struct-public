@@ -142,7 +142,6 @@ class BayesModelAgnosticMetaLearning(nn.Module):
                     )
 
                     losses = []
-                    enc_states = self._compute_enc_states(inner_batch)
                     for enc_state, (enc_input, dec_output) in zip(enc_states, inner_batch):
                         ret_dic = self.decoder(dec_output, enc_state)
                         losses.append(ret_dic["loss"])
