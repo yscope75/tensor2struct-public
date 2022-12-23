@@ -141,7 +141,12 @@ class BayesModelAgnosticMetaLearning(nn.Module):
                         )
                     )
 
-                    loss = inner_model._compute_loss_enc_batched(inner_batch, enc_states)
+                    losses = []
+                    enc_states = self._compute_enc_states(inner_batch)
+                    for enc_state, (enc_input, dec_output) in zip(enc_states, inner_batch):
+                        ret_dic = self.decoder(dec_output, enc_state)
+                        losses.append(ret_dic["loss"])
+                    loss = torch.mean(torch.stack(losses, dim=0), dim=0)
                     inner_loss.append(loss.item())
                     particle_grads = torch.autograd.grad(loss, inner_encoder_params[i])
                     distance_nll[i, :] = torch.nn.utils.parameters_to_vector(particle_grads)
