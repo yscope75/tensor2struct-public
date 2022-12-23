@@ -143,7 +143,7 @@ class BayesModelAgnosticMetaLearning(nn.Module):
 
                     losses = []
                     for enc_state, (enc_input, dec_output) in zip(enc_states, inner_batch):
-                        ret_dic = self.decoder(dec_output, enc_state)
+                        ret_dic = inner_model.decoder(dec_output, enc_state)
                         losses.append(ret_dic["loss"])
                     loss = torch.mean(torch.stack(losses, dim=0), dim=0)
                     inner_loss.append(loss.item())
@@ -155,9 +155,9 @@ class BayesModelAgnosticMetaLearning(nn.Module):
             # compute inner gradients with rbf kernel
             inner_grads = torch.matmul(kernel_matrix, distance_nll) + grad_kernel
             # update inner_net parameters 
-            inner_non_bert_parmas_matrix = inner_non_bert_parmas_matrix - self.inner_lr*inner_grads
+            inner_params_matrix = inner_params_matrix - self.inner_lr*inner_grads
             for i in range(self.num_particles):
-                torch.nn.utils.vector_to_parameters(inner_non_bert_parmas_matrix[i],
+                torch.nn.utils.vector_to_parameters(inner_params_matrix[i],
                                                     inner_encoder_params[i])
             # copy inner_grads to main network
             for i in range(self.num_particles):
@@ -187,7 +187,7 @@ class BayesModelAgnosticMetaLearning(nn.Module):
                 if g_o is not None:
                     p.grad.data.add_(g_o.data)
                     
-        final_loss = inner_loss + mean_outer_loss.item()
+        final_loss = sum(inner_loss)/self.num_particles + mean_outer_loss.item()
         ret_dic["loss"] = final_loss
         del inner_model
         import gc

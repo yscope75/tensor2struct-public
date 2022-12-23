@@ -147,8 +147,7 @@ class BayesianMetaTrainer(bayesian_meta_train.BMetaTrainer):
             self.logger.info("Step {}: loss={:.4f}".format(last_step, loss))
             self.logger.info(f"Step {last_step}, lr={self.train_config.inner_lr, outer_lr}")
             wandb.log({"train_loss": loss}, step=last_step)
-            for idx, lr in enumerate(self.train_config.inner_lr):
-                wandb.log({f"inner_lr_{idx}": lr}, step=last_step)
+            wandb.log({f"inner_lr": self.train_config.inner_lr}, step=last_step)
             for idx, lr in enumerate(outer_lr):
                 wandb.log({f"outer_lr_{idx}": lr}, step=last_step)
 
