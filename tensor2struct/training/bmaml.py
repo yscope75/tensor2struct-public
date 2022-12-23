@@ -136,8 +136,8 @@ class BayesModelAgnosticMetaLearning(nn.Module):
                             "table": t_enc_new_item,
                         },
                         pointer_maps={
-                            "column": column_pointer_maps[batch_idx],
-                            "table": table_pointer_maps[batch_idx],
+                            "column": column_pointer_maps[0],
+                            "table": table_pointer_maps[0],
                         },
                         m2c_align_mat=align_mat_item[0],
                         m2t_align_mat=align_mat_item[1],
