@@ -203,6 +203,11 @@ class BayesModelAgnosticMetaLearning(nn.Module):
                                               num_of_particles=self.num_particles)
             # compute inner gradients with rbf kernel
             inner_grads = torch.matmul(kernel_matrix, distance_nll) + grad_kernel
+            # trying to free gpu memory 
+            # not sure it would help
+            del kernel_matrix
+            del grad_kernel
+            gc.collect()
             # update inner_net parameters 
             inner_params_matrix = inner_params_matrix - self.inner_lr*inner_grads
             for i in range(self.num_particles):
