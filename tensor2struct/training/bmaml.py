@@ -207,6 +207,7 @@ class BayesModelAgnosticMetaLearning(nn.Module):
             # not sure it would help
             del kernel_matrix
             del grad_kernel
+            del distance_nll
             import gc
             gc.collect()
             # update inner_net parameters 
