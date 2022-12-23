@@ -85,13 +85,14 @@ class BayesModelAgnosticMetaLearning(nn.Module):
                                        device=self.device)
             
             input_item = inner_batch[0]
+            enc_input_list = [enc_input for enc_input, dec_output in input_item]
             column_pointer_maps = [
-                {i: [i] for i in range(len(desc["columns"]))} for desc, _ in input_item
+                {i: [i] for i in range(len(desc["columns"]))} for desc in enc_input_list
             ]
             table_pointer_maps = [
-                {i: [i] for i in range(len(desc["tables"]))} for desc, _ in input_item
+                {i: [i] for i in range(len(desc["tables"]))} for desc in input_item
             ]
-            plm_output = inner_model.bert_model([enc_input for enc_input, dec_output in input_item])
+            plm_output = inner_model.bert_model(enc_input_list)
             inner_loss = []
             for i in range(self.num_particles):
                 enc_states = []
