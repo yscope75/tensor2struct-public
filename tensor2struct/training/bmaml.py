@@ -84,19 +84,18 @@ class BayesModelAgnosticMetaLearning(nn.Module):
                                              inner_params_matrix.size(1)),
                                        device=self.device)
             
-            input_item = inner_batch[0]
-            enc_input_list = [enc_input for enc_input, dec_output in input_item]
+            enc_input_list = [enc_input for enc_input, dec_output in inner_batch]
             column_pointer_maps = [
                 {i: [i] for i in range(len(desc["columns"]))} for desc in enc_input_list
             ]
             table_pointer_maps = [
-                {i: [i] for i in range(len(desc["tables"]))} for desc in input_item
+                {i: [i] for i in range(len(desc["tables"]))} for desc in enc_input_list
             ]
             plm_output = inner_model.bert_model(enc_input_list)
             inner_loss = []
             for i in range(self.num_particles):
                 enc_states = []
-                for batch_idx, (enc_input, _) in enumerate(input_item):
+                for batch_idx, (enc_input, _) in enumerate(inner_batch):
                 
                     relation = inner_model.schema_linking(enc_input)
                     (
@@ -142,7 +141,7 @@ class BayesModelAgnosticMetaLearning(nn.Module):
                         )
                     )
 
-                    loss = inner_model._compute_loss_enc_batched(input_item, enc_states)
+                    loss = inner_model._compute_loss_enc_batched(inner_batch, enc_states)
                     inner_loss.append(loss.item())
                     particle_grads = torch.autograd.grad(loss, inner_encoder_params[i])
                     distance_nll[i, :] = torch.nn.utils.parameters_to_vector(particle_grads)
