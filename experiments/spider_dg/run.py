@@ -60,8 +60,11 @@ def main():
         wandb.init(project=project, group=expname, job_type=args.mode)
 
     if args.mode == "train":
-        train_config = TrainConfig(model_config_file, model_config_args, logdir)
-        train.main(train_config)
+        # train_config = TrainConfig(model_config_file, model_config_args, logdir)
+        # train.main(train_config)
+        # for Quan sever 
+        train_config = MetaTrainConfig(model_config_file, model_config_args, logdir)
+        bayesian_meta_train.main(train_config)
     elif args.mode == "meta_train":
         train_config = MetaTrainConfig(model_config_file, model_config_args, logdir)
         meta_train.main(train_config)
