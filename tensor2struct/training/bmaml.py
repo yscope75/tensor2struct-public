@@ -70,6 +70,7 @@ class BayesModelAgnosticMetaLearning(nn.Module):
         assert model.training
         # clone model for inner gradients computing
         inner_model = copy.deepcopy(model)
+        model.to('cpu')
         inner_encoder_params = []
         for i in range(self.num_particles):
             inner_encoder_params.append(list(inner_model.list_of_encoders[i].parameters()))
@@ -216,11 +217,11 @@ class BayesModelAgnosticMetaLearning(nn.Module):
                     p_tar.grad.data.add_(p_src) # todo: divide by num_of_sample if inner is in ba
             # trying to free gpu memory 
             # not sure it would help
-            del kernel_matrix
-            del grad_kernel
-            del distance_nll
-            del inner_grads
-            torch.cuda.empty_cache()
+            # del kernel_matrix
+            # del grad_kernel
+            # del distance_nll
+            # del inner_grads
+            # torch.cuda.empty_cache()
             
         logger.info(f"Inner loss: {sum(inner_loss)/self.num_particles}")
         for p_tgt, p_src in zip(model.parameters(),
@@ -246,7 +247,9 @@ class BayesModelAgnosticMetaLearning(nn.Module):
         final_loss = sum(inner_loss)/self.num_particles + mean_outer_loss.item()
         ret_dic["loss"] = final_loss
         del inner_model
-        torch.cuda.empty_cache()
+        import gc
+        gc.collect()
+        
         return ret_dic
     
     @staticmethod
