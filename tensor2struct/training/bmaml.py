@@ -58,13 +58,21 @@ class BayesModelAgnosticMetaLearning(nn.Module):
         """
         return []
 
-    def meta_train(self, model, model_encoder_params, inner_batch, outer_batches):
+    def meta_train(self, model, 
+                   model_encoder_params,
+                   model_decoder_params, 
+                   inner_batch, outer_batches):
         assert not self.first_order
-        return self.maml_train(model, model_encoder_params, inner_batch, outer_batches)
+        return self.maml_train(model, 
+                               model_encoder_params, 
+                               model_decoder_params, 
+                               inner_batch, 
+                               outer_batches)
 
     def maml_train(self, 
                    model, 
                    model_encoder_params,
+                   model_decoder_params,
                    inner_batch, 
                    outer_batches):
         assert model.training
@@ -77,13 +85,17 @@ class BayesModelAgnosticMetaLearning(nn.Module):
             [torch.nn.utils.parameters_to_vector(params) for params in inner_encoder_params],
             dim=0
         )
+        inner_decoder_params = list(inner_model.decoder.parameters())
+        particle_len = len(inner_encoder_params[0])
+        inner_decoder_p_vec = torch.nn.utils.parameters_to_vector(inner_decoder_params)
         ret_dic = {}
         for _step in range(self.inner_steps):
             # for computing distance 
             distance_nll = torch.empty(size=(self.num_particles,
                                              inner_params_matrix.size(1)),
                                        device=self.device)
-            
+            # decoder grad vector, store decoder grads on inner loop
+            decoder_grads_vec = torch.zeros_like(inner_decoder_p_vec)
             enc_input_list = [enc_input for enc_input, dec_output in inner_batch]
             column_pointer_maps = [
                 {i: [i] for i in range(len(desc["columns"]))} for desc in enc_input_list
@@ -196,13 +208,15 @@ class BayesModelAgnosticMetaLearning(nn.Module):
                     losses.append(ret_dic["loss"])
                 loss = torch.mean(torch.stack(losses, dim=0), dim=0)
                 inner_loss.append(loss.item())
-                particle_grads = torch.autograd.grad(loss, inner_encoder_params[i])
+                enc_dec_grads = torch.autograd.grad(loss, inner_encoder_params[i] + inner_decoder_params)
+                particle_grads = enc_dec_grads[:particle_len]
+                decoder_grads = enc_dec_grads[particle_grads:]
                 distance_nll[i, :] = torch.nn.utils.parameters_to_vector(particle_grads)
             
             kernel_matrix, grad_kernel, _ = BayesModelAgnosticMetaLearning.get_kernel(params=inner_params_matrix,
                                               num_of_particles=self.num_particles)
             # compute inner gradients with rbf kernel
-            inner_grads = torch.matmul(kernel_matrix, distance_nll) + grad_kernel
+            inner_grads = torch.matmul(kernel_matrix, distance_nll) - grad_kernel
             # update inner_net parameters 
             inner_params_matrix = inner_params_matrix - self.inner_lr*inner_grads
             for i in range(self.num_particles):
