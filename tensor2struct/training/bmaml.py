@@ -95,7 +95,7 @@ class BayesModelAgnosticMetaLearning(nn.Module):
                                              inner_params_matrix.size(1)),
                                        device=self.device)
             # decoder grad vector, store decoder grads on inner loop
-            decoder_grads_vec = torch.zeros_like(inner_decoder_p_vec, requires_grad=False)
+            decoder_grads_vec = torch.zeros_like(inner_decoder_p_vec)
             enc_input_list = [enc_input for enc_input, dec_output in inner_batch]
             column_pointer_maps = [
                 {i: [i] for i in range(len(desc["columns"]))} for desc in enc_input_list

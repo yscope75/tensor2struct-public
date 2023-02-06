@@ -133,7 +133,7 @@ class BayesianMetaTrainer(bayesian_meta_train.BMetaTrainer):
                         param_group["params"], self.train_config.clip_grad,
                     )
 
-
+            print("inner step done!")
             optimizer.step()
             optimizer.zero_grad()
 
