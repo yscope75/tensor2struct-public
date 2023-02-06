@@ -235,7 +235,7 @@ class BayesModelAgnosticMetaLearning(nn.Module):
                     p_tar.grad.data.add_(p_src) # todo: divide by num_of_sample if inner is in ba
             # copy decoder grads to the main network
             for p_tar, p_src in zip(model_decoder_params,
-                            BayesModelAgnosticMetaLearning.vector_to_list_params(decoder_grads, model_decoder_params)):
+                            BayesModelAgnosticMetaLearning.vector_to_list_params(decoder_grads_vec, model_decoder_params)):
                 p_tar.grad.data.add_(p_src)
             # trying to free gpu memory 
             # not sure it would help
