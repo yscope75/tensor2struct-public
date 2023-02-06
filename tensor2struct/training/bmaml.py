@@ -263,6 +263,7 @@ class BayesModelAgnosticMetaLearning(nn.Module):
         grad_outer = autograd.grad(mean_outer_loss, 
                                    inner_model.parameters(),
                                    allow_unused=True)
+        print("out grad compute ok!")
         for p, g_o in zip(model.parameters(), grad_outer):
                 if g_o is not None:
                     p.grad.data.add_(g_o.data)
