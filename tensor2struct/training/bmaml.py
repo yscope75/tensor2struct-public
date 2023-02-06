@@ -217,6 +217,7 @@ class BayesModelAgnosticMetaLearning(nn.Module):
             
             kernel_matrix, grad_kernel, _ = BayesModelAgnosticMetaLearning.get_kernel(params=inner_params_matrix,
                                               num_of_particles=self.num_particles)
+            print("first compute grad success!")
             # compute inner gradients with rbf kernel
             inner_grads = torch.matmul(kernel_matrix, distance_nll) - grad_kernel
             # update inner_net parameters 
