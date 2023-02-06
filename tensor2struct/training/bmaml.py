@@ -95,7 +95,7 @@ class BayesModelAgnosticMetaLearning(nn.Module):
                                              inner_params_matrix.size(1)),
                                        device=self.device)
             # decoder grad vector, store decoder grads on inner loop
-            decoder_grads_vec = torch.zeros_like(inner_decoder_p_vec)
+            decoder_grads_vec = torch.zeros_like(inner_decoder_p_vec, requires_grad=False)
             enc_input_list = [enc_input for enc_input, dec_output in inner_batch]
             column_pointer_maps = [
                 {i: [i] for i in range(len(desc["columns"]))} for desc in enc_input_list
@@ -217,7 +217,7 @@ class BayesModelAgnosticMetaLearning(nn.Module):
             
             kernel_matrix, grad_kernel, _ = BayesModelAgnosticMetaLearning.get_kernel(params=inner_params_matrix,
                                               num_of_particles=self.num_particles)
-            print("first compute grad success!")
+            
             # compute inner gradients with rbf kernel
             inner_grads = torch.matmul(kernel_matrix, distance_nll) - grad_kernel
             # update inner_net parameters 
@@ -263,7 +263,7 @@ class BayesModelAgnosticMetaLearning(nn.Module):
         grad_outer = autograd.grad(mean_outer_loss, 
                                    inner_model.parameters(),
                                    allow_unused=True)
-        print("out grad compute ok!")
+        
         for p, g_o in zip(model.parameters(), grad_outer):
                 if g_o is not None:
                     p.grad.data.add_(g_o.data)
