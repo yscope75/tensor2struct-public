@@ -208,7 +208,9 @@ class BayesModelAgnosticMetaLearning(nn.Module):
                     losses.append(ret_dic["loss"])
                 loss = torch.mean(torch.stack(losses, dim=0), dim=0)
                 inner_loss.append(loss.item())
-                enc_dec_grads = torch.autograd.grad(loss, inner_encoder_params[i] + inner_decoder_params)
+                enc_dec_grads = torch.autograd.grad(loss, 
+                                                    inner_encoder_params[i] + inner_decoder_params,
+                                                    allow_unused=True)
                 particle_grads = enc_dec_grads[:particle_len]
                 decoder_grads = enc_dec_grads[particle_len:]
                 decoder_grads_vec = decoder_grads_vec + (1/self.num_particles)*torch.nn.utils.parameters_to_vector(decoder_grads)
