@@ -210,7 +210,9 @@ class BayesModelAgnosticMetaLearning(nn.Module):
                 inner_loss.append(loss.item())
                 enc_dec_grads = torch.autograd.grad(loss, inner_encoder_params[i] + inner_decoder_params)
                 particle_grads = enc_dec_grads[:particle_len]
-                decoder_grads = enc_dec_grads[particle_grads:]
+                decoder_grads = enc_dec_grads[particle_len:]
+                decoder_grads_vec = decoder_grads_vec + (1/self.num_particles)*decoder_grads
+                
                 distance_nll[i, :] = torch.nn.utils.parameters_to_vector(particle_grads)
             
             kernel_matrix, grad_kernel, _ = BayesModelAgnosticMetaLearning.get_kernel(params=inner_params_matrix,
@@ -222,12 +224,19 @@ class BayesModelAgnosticMetaLearning(nn.Module):
             for i in range(self.num_particles):
                 torch.nn.utils.vector_to_parameters(inner_params_matrix[i],
                                                     inner_encoder_params[i])
+            # update decoder parameters
+            inner_decoder_p_vec = inner_decoder_p_vec - self.inner_lr*decoder_grads_vec
+            torch.nn.utils.vector_to_parameters(inner_decoder_p_vec, inner_decoder_params)
             # copy inner_grads to main network
             for i in range(self.num_particles):
                 for p_tar, p_src in zip(model_encoder_params[i],
                                         BayesModelAgnosticMetaLearning.vector_to_list_params(inner_grads[i],
                                                                                              model_encoder_params[i])):
                     p_tar.grad.data.add_(p_src) # todo: divide by num_of_sample if inner is in ba
+            # copy decoder grads to the main network
+            for p_tar, p_src in zip(model_decoder_params,
+                            BayesModelAgnosticMetaLearning.vector_to_list_params(decoder_grads, model_decoder_params)):
+                p_tar.grad.data.add_(p_src)
             # trying to free gpu memory 
             # not sure it would help
             # del kernel_matrix
