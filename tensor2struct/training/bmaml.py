@@ -216,6 +216,9 @@ class BayesModelAgnosticMetaLearning(nn.Module):
                                                     allow_unused=True)
                 particle_grads = enc_dec_grads[:particle_len]
                 decoder_grads = enc_dec_grads[particle_len:]
+                for g in decoder_grads:
+                    if g is None:
+                        g = torch.zeros_like(g)
                 decoder_grads_vec = decoder_grads_vec + (1/self.num_particles)*torch.nn.utils.parameters_to_vector(decoder_grads)
                 
                 distance_nll[i, :] = torch.nn.utils.parameters_to_vector(particle_grads)
