@@ -110,9 +110,9 @@ class BayesianMetaTrainer(bayesian_meta_train.BMetaTrainer):
     ):
         with self.model_random:
             
-            for p in self.model.parameters():
-                if p.grad is None:
-                    p.grad = torch.zeros_like(p)
+            # for p in self.model.parameters():
+            #     if p.grad is None:
+            #         p.grad = torch.zeros_like(p)
             model_encoder_params = []
             for i in range(self.train_config.num_particles):
                 model_encoder_params.append(list(self.model.list_of_encoders[i].parameters()))
