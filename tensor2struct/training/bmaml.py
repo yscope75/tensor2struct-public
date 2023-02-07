@@ -77,6 +77,9 @@ class BayesModelAgnosticMetaLearning(nn.Module):
                    outer_batches):
         assert model.training
         # clone model for inner gradients computing
+        for p in self.model.parameters():
+            if p.grad is None:
+                p.grad = torch.zeros_like(p)
         inner_model = copy.deepcopy(model)
         inner_encoder_params = []
         for i in range(self.num_particles):
