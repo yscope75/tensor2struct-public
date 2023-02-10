@@ -226,7 +226,7 @@ class BayesModelAgnosticMetaLearning(nn.Module):
                 for idx, g in enumerate(aligner_grads):
                     if g is None:
                         aligner_grads[idx] = torch.zeros_like(inner_aligner_params[idx])
-                decoder_grads = enc_dec_grads[particle_len + aligner_len:]
+                decoder_grads = list(enc_dec_grads[particle_len + aligner_len:])
                 for idx, g in enumerate(decoder_grads):
                     if g is None:
                         decoder_grads[idx] = torch.zeros_like(inner_decoder_params[idx])
