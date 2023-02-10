@@ -60,6 +60,7 @@ class BayesModelAgnosticMetaLearning(nn.Module):
 
     def meta_train(self, model, 
                    model_encoder_params,
+                   model_aligner_params,
                    model_decoder_params, 
                    inner_batch, outer_batches):
         assert not self.first_order
@@ -222,7 +223,7 @@ class BayesModelAgnosticMetaLearning(nn.Module):
                                                     allow_unused=True)
                 particle_grads = enc_dec_grads[:particle_len]
                 aligner_grads = enc_dec_grads[particle_len:aligner_len]
-                decoder_grads = list(enc_dec_grads[aligner_len:])
+                decoder_grads = enc_dec_grads[aligner_len:]
                 # for idx, g in enumerate(decoder_grads):
                 #     if g is None:
                 #         decoder_grads[idx] = torch.zeros_like(inner_decoder_params[idx])
@@ -255,7 +256,7 @@ class BayesModelAgnosticMetaLearning(nn.Module):
                     p_tar.grad.data.add_(p_src) # todo: divide by num_of_sample if inner is in ba
             # copy aligner grads to the main network
             for p_tar, p_src in zip(model_aligner_params,
-                            BayesModelAgnosticMetaLearning.vector_to_list_params(decoder_grads_vec, model_aligner_params)):
+                            BayesModelAgnosticMetaLearning.vector_to_list_params(alinger_grads_vec, model_aligner_params)):
                 p_tar.grad.data.add_(p_src)
             # copy decoder grads to the main network
             for p_tar, p_src in zip(model_decoder_params,
