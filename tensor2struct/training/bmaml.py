@@ -222,6 +222,7 @@ class BayesModelAgnosticMetaLearning(nn.Module):
                                                     inner_encoder_params[i] + inner_aligner_params + inner_decoder_params)
                 particle_grads = enc_dec_grads[:particle_len]
                 aligner_grads = enc_dec_grads[particle_len:aligner_len]
+                print(aligner_grads)
                 decoder_grads = enc_dec_grads[aligner_len:]
                 # for idx, g in enumerate(decoder_grads):
                 #     if g is None:
