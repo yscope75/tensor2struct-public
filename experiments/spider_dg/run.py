@@ -11,6 +11,7 @@ from experiments.spider_dg import (
     train,
     meta_train,
     dema_train,
+    bayesian_meta_train,
 )
 
 
@@ -37,7 +38,7 @@ class DEMATrainConfig:
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "mode", choices=["train", "meta_train", "dema_train"], help="train/meta_train/dist_train",
+        "mode", choices=["train", "meta_train", "dema_train", "bayesian_meta_train"], help="train/meta_train/dist_train",
     )
     parser.add_argument("exp_config_file", help="jsonnet file for experiments")
     args = parser.parse_args()
@@ -62,7 +63,7 @@ def main():
     project = exp_config["project"]
 
     # dist train need to start a wandb session in each process, not a global one
-    if args.mode in ["train", "meta_train", "dema_train"]:
+    if args.mode in ["train", "meta_train", "dema_train", "bayesian_meta_train"]:
         wandb.init(project=project, group=expname, job_type=args.mode)
 
     if args.mode == "train":
@@ -74,6 +75,9 @@ def main():
     elif args.mode == "dema_train":
         train_config = DEMATrainConfig(model_config_file, model_config_args, logdir)
         dema_train.main(train_config)
+    elif args.mode == "bayesian_meta_train":
+        train_config = MetaTrainConfig(model_config_file, model_config_args, logdir)
+        bayesian_meta_train.main(train_config)
 
 
 if __name__ == "__main__":

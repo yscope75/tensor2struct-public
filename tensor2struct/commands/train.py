@@ -277,7 +277,10 @@ def setup(args):
         args.logdir = os.path.join(args.logdir, config["model_name"])
 
     # Initialize the logger
-    logfile_path = os.path.join(args.logdir, "log.txt")
+    log_file_name = "log-{}.txt".format(
+                datetime.datetime.now().strftime("%Y%m%dT%H%M%S%Z")
+            )
+    logfile_path = os.path.join(args.logdir, log_file_name)
     os.makedirs(os.path.dirname(logfile_path), exist_ok=True)
     logger = logging.getLogger("tensor2struct")
     logger.setLevel(logging.INFO)

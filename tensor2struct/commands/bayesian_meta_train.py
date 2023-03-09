@@ -27,7 +27,7 @@ class MetaTrainConfig(train.TrainConfig):
     first_order = attr.ib(kw_only=True, default=False)
     data_scheduler = attr.ib(kw_only=True)
     
-class MetaTrainer(train.Trainer):
+class BMetaTrainer(train.Trainer):
     def load_train_config(self):
         self.train_config = registry.instantiate(
             MetaTrainConfig, self.config["meta_train"]
@@ -122,13 +122,12 @@ class MetaTrainer(train.Trainer):
                 wandb.log({f"outer_lr_{idx}": lr}, step=last_step)
 
     def train(self, config, modeldir):
-        inner_optimizer, maml_trainer, optimizer, lr_scheduler = self.load_optimizer(
+        maml_trainer, optimizer, lr_scheduler = self.load_optimizer(
             config
         )
         saver, last_step = self.load_saver(
             config,
             modeldir,
-            inner_optimizer=inner_optimizer,
             optimizer=optimizer,
             maml_trainner=maml_trainer,
         )
@@ -165,7 +164,7 @@ def main(args):
     config, logger = train.setup(args)
 
     # Construct trainer and do training
-    trainer = MetaTrainer(logger, config)
+    trainer = BMetaTrainer(logger, config)
     trainer.train(config, modeldir=args.logdir)
 
 

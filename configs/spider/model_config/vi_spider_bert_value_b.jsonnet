@@ -29,15 +29,10 @@ function(args, data_path=_data_path) spider_base(args, data_path=_data_path) {
 
     },
     model+:{
-        name: 'BayesEncDecV2',
-        bert_model: {
-            name: 'bert-encoder',
+        encoder: {
+            name: 'spider-bert',
             bert_version: $.args.bert_version,
             bert_token_type: $.args.bert_token_type,
-        },
-        encoder: {
-            name: 'spider-bert-truncatedV2',
-            bert_version: $.args.bert_version,
             linking_config: {
                 name: "spider_string_matching",
             },
@@ -75,7 +70,6 @@ function(args, data_path=_data_path) spider_base(args, data_path=_data_path) {
             min_freq: 32,
             value_tokenizer: $.model.encoder_preproc.bert_version,
         },
-        num_particles: $.args.num_particles,
 
     },
 
