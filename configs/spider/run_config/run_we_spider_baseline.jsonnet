@@ -14,7 +14,7 @@
         loss_type: "softmax", # softmax, label_smooth
 
         # bert
-        opt: "torchAdamw",   # bertAdamw, torchAdamw
+        opt: "adamw",   # bertAdamw, torchAdamw
         lr_scheduler: "warmup_polynomial", # bert_warmup_polynomial_group,bert_warmup_polynomial_grou_v2
 
         # grammar
