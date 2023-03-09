@@ -24,9 +24,9 @@
         include_literals: true,
 
         # training
-        bs: 2,
+        bs: 12,
         att: 0,
-        lr: 5e-4,
+        lr: 6e-4,
         clip_grad: 0.3,
         num_batch_accumulated: 1,
         num_particles: 5,
