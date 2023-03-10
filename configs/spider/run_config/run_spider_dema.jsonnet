@@ -14,7 +14,7 @@
         loss_type: "softmax", # softmax, label_smooth
 
         # bert
-        opt: "adamw",   # bertAdamw, torchAdamw
+        opt: "sgd",   # bertAdamw, torchAdamw
         nesterov: true,
         lr_scheduler: "warmup_polynomial", # bert_warmup_polynomial_group,bert_warmup_polynomial_grou_v2
         bert_token_type: false,
@@ -27,14 +27,14 @@
         # training
         bs: 12,
         att: 0,
-        lr: 6e-4,
+        lr: 5e-4,
         clip_grad: 0.3,
         num_batch_accumulated: 1,
         num_particles: 5,
-        max_steps: 1000,
-        save_threshold: 900,
+        max_steps: 20000,
+        save_threshold: 19000,
         use_bert_training: false,
-        device: "cuda:0",
+        device: "cuda:6",
     },
 
     eval_section: "val",
