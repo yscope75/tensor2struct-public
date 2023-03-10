@@ -84,7 +84,7 @@ function(args, data_path=_data_path) spider_base(args, data_path=_data_path) {
         name: $.args.opt,
         nesterov: $.args.nesterov,
         momentum: $.args.momentum,
-        lr: 0.0,
+        lr: $.args.lr,
         bert_lr: 0.0,
     },
 
