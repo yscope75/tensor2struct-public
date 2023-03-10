@@ -16,6 +16,7 @@
         # bert
         opt: "sgd",   # bertAdamw, torchAdamw
         nesterov: true,
+        momentum: 0.9,
         lr_scheduler: "warmup_polynomial", # bert_warmup_polynomial_group,bert_warmup_polynomial_grou_v2
         bert_token_type: false,
         bert_version: "vinai/phobert-large",
