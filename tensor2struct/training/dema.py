@@ -170,8 +170,8 @@ class DeepEnsembleModelAgnostic(nn.Module):
                 for idx, g in enumerate(decoder_grads):
                     if g is None:
                         decoder_grads[idx] = torch.zeros_like(decoder_params[idx])
-                alinger_grads_vec = alinger_grads_vec + (1/self.num_particles)*torch.nn.utils.parameters_to_vector(aligner_grads)
-                decoder_grads_vec = decoder_grads_vec + (1/self.num_particles)*torch.nn.utils.parameters_to_vector(decoder_grads)
+                alinger_grads_vec = alinger_grads_vec + (1/(self.num_particles*self.num_particles))*torch.nn.utils.parameters_to_vector(aligner_grads)
+                decoder_grads_vec = decoder_grads_vec + (1/(self.num_particles*self.num_particles))*torch.nn.utils.parameters_to_vector(decoder_grads)
                 
                 distance_nll[i, :] = torch.nn.utils.parameters_to_vector(particle_grads)
             
@@ -179,7 +179,7 @@ class DeepEnsembleModelAgnostic(nn.Module):
                                               num_of_particles=self.num_particles)
             
             # compute inner gradients with rbf kernel
-            encoders_grads = (1/self.num_particles)*torch.matmul(kernel_matrix, distance_nll) - grad_kernel
+            encoders_grads = (1/self.num_particles)*(torch.matmul(kernel_matrix, distance_nll) - grad_kernel)
             # copy inner_grads to main network
             for i in range(self.num_particles):
                 for p_tar, p_src in zip(model_encoder_params[i],
