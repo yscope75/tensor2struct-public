@@ -179,7 +179,7 @@ class DeepEnsembleModelAgnostic(nn.Module):
                                               num_of_particles=self.num_particles)
             
             # compute inner gradients with rbf kernel
-            encoders_grads = torch.matmul(kernel_matrix, distance_nll) - 1.5*grad_kernel
+            encoders_grads = (1/self.num_particles)*torch.matmul(kernel_matrix, distance_nll) - grad_kernel
             # copy inner_grads to main network
             for i in range(self.num_particles):
                 for p_tar, p_src in zip(model_encoder_params[i],
