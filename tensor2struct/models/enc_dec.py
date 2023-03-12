@@ -463,8 +463,6 @@ class BSemiBatchedEncDecModelV2(torch.nn.Module):
             q_enc_new_item = torch.stack(q_particle_list, dim=0).mean(dim=0)
             c_enc_new_item = torch.stack(c_particle_list, dim=0).mean(dim=0)
             t_enc_new_item = torch.stack(t_particle_list, dim=0).mean(dim=0)
-            align_mat_item = (torch.stack(m2c_align_mat_list, dim=0).mean(dim=0),
-                              torch.stack(m2t_align_mat_list, dim=0).mean(dim=0))
             
             # attention memory 
             memory = []
@@ -493,8 +491,8 @@ class BSemiBatchedEncDecModelV2(torch.nn.Module):
                         "column": column_pointer_maps[batch_idx],
                         "table": table_pointer_maps[batch_idx],
                     },
-                    m2c_align_mat=align_mat_item[0],
-                    m2t_align_mat=align_mat_item[1],
+                    m2c_align_mat=torch.stack(m2c_align_mat_list, dim=0).mean(dim=0),
+                    m2t_align_mat=torch.stack(m2t_align_mat_list, dim=0).mean(dim=0),
                 )
             )
         
