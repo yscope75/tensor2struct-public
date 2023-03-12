@@ -148,8 +148,8 @@ class DeepEnsembleModelAgnostic(nn.Module):
                 enc_dec_grads = torch.autograd.grad(loss, 
                                                     encoder_params[i] + decoder_params,
                                                     allow_unused=True)
-                particle_grads = enc_dec_grads[:particle_len]
-                for idx, g in enumerate(encoder_params[i]):
+                particle_grads = list(enc_dec_grads[:particle_len])
+                for idx, g in enumerate(particle_grads):
                     if g is None:
                         particle_grads[idx] = torch.zeros_like(encoder_params[i][idx])
                 decoder_grads = list(enc_dec_grads[particle_len:])
