@@ -18,7 +18,7 @@
         lr_scheduler: "bert_warmup_polynomial_group_v2", # bert_warmup_polynomial_group,bert_warmup_polynomial_grou_v2
         bert_token_type: false,
         bert_version: "vinai/phobert-large",
-        bert_lr: 2e-5, 
+        bert_lr: 1e-5, 
 
         # grammar
         include_literals: true,
@@ -26,11 +26,11 @@
         # training
         bs: 3,
         att: 0,
-        lr: 5e-4,
+        lr: 6e-4,
         inner_lr: 5e-4,
         clip_grad: 0.3,
         num_batch_accumulated: 4,
-        num_particles: 10,
+        num_particles: 5,
         max_steps: 20000,
         save_threshold: 19000,
         use_bert_training: true,
