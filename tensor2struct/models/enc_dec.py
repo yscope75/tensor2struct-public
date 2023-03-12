@@ -445,7 +445,8 @@ class BSemiBatchedEncDecModelV2(torch.nn.Module):
             q_particle_list = []
             c_particle_list = []
             t_particle_list = []
-            align_mat_item_list = []
+            m2c_align_mat_list = []
+            m2t_align_mat_list = []
             for i in range(self.num_particles):
                 (
                     q_enc_new_item,
@@ -456,12 +457,14 @@ class BSemiBatchedEncDecModelV2(torch.nn.Module):
                 q_particle_list.append(q_enc_new_item)
                 c_particle_list.append(c_enc_new_item)
                 t_particle_list.append(t_enc_new_item)
-                align_mat_item_list.append(align_mat_item)
+                m2c_align_mat_list.append(align_mat_item[0])
+                m2t_align_mat_list.append(align_mat_item[1])
                 
             q_enc_new_item = torch.stack(q_particle_list, dim=0).mean(dim=0)
             c_enc_new_item = torch.stack(c_particle_list, dim=0).mean(dim=0)
             t_enc_new_item = torch.stack(t_particle_list, dim=0).mean(dim=0)
-            align_mat_item = torch.stack(align_mat_item_list, dim=0).mean(dim=0)
+            align_mat_item = (torch.stack(m2c_align_mat_list, dim=0).mean(dim=0),
+                              torch.stack(m2t_align_mat_list, dim=0).mean(dim=0))
             
             # attention memory 
             memory = []
@@ -473,11 +476,7 @@ class BSemiBatchedEncDecModelV2(torch.nn.Module):
             if "table" in include_in_memory:
                 memory.append(t_enc_new_item)
             memory = torch.cat(memory, dim=1)
-            # alignment matrix
-            align_mat_item = self.aligner(
-                enc_input, q_enc_new_item, c_enc_new_item, t_enc_new_item, relation
-            )
-        
+
             enc_states.append(
                 SpiderEncoderState(
                     state=None,
