@@ -151,7 +151,7 @@ class DeepEnsembleModelAgnostic(nn.Module):
                 particle_grads = enc_dec_grads[:particle_len]
                 for idx, g in enumerate(particle_grads):
                     if g is None:
-                        particle_grads[idx] = torch.zeros_like(particle_grads[idx])
+                        particle_grads[idx] = torch.zeros_like(encoder_params[i][idx])
                 decoder_grads = list(enc_dec_grads[particle_len:])
                 for idx, g in enumerate(decoder_grads):
                     if g is None:
