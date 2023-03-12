@@ -386,20 +386,6 @@ class BSemiBatchedEncDecModelV2(torch.nn.Module):
             )
             self.list_of_encoders.append(particle_encoder)
             
-        # initialization for encoder return state
-        # matching 
-        # todo: remember to check the linking config
-        self.schema_linking = registry.construct(
-            "schema_linking", self.list_of_encoders[0].linking_config, preproc=self.encoder_preproc, device=device,
-        )
-        
-         # aligner
-        self.aligner = rat.AlignmentWithRAT(
-            device=device,
-            hidden_size=self.list_of_encoders[0].enc_hidden_size,
-            relations2id=self.encoder_preproc.relations2id,
-            enable_latent_relations=False,
-        )
         
         self.decoder = registry.construct(
             "decoder", decoder, device=device, preproc=preproc.dec_preproc
@@ -459,20 +445,23 @@ class BSemiBatchedEncDecModelV2(torch.nn.Module):
             q_particle_list = []
             c_particle_list = []
             t_particle_list = []
-            relation = self.schema_linking(enc_input)
+            align_mat_item_list = []
             for i in range(self.num_particles):
                 (
                     q_enc_new_item,
                     c_enc_new_item,
                     t_enc_new_item,
-                ) = self.list_of_encoders[i](enc_input, sample_embed, relation)
+                    align_mat_item,
+                ) = self.list_of_encoders[i](enc_input, sample_embed)
                 q_particle_list.append(q_enc_new_item)
                 c_particle_list.append(c_enc_new_item)
                 t_particle_list.append(t_enc_new_item)
+                align_mat_item_list.append(align_mat_item)
                 
             q_enc_new_item = torch.stack(q_particle_list, dim=0).mean(dim=0)
             c_enc_new_item = torch.stack(c_particle_list, dim=0).mean(dim=0)
             t_enc_new_item = torch.stack(t_particle_list, dim=0).mean(dim=0)
+            align_mat_item = torch.stack(align_mat_item_list, dim=0).mean(dim=0)
             
             # attention memory 
             memory = []

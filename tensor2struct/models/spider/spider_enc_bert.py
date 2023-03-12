@@ -714,6 +714,11 @@ class SpiderEncoderBertTruncated(torch.nn.Module):
         )
         self.enc_hidden_size = self.base_enc_hidden_size
      
+        # matching
+        self.schema_linking = registry.construct(
+            "schema_linking", linking_config, preproc=preproc, device=device,
+        )
+        
         # rat
         rat_modules = {"rat": rat.RAT, "none": rat.NoOpUpdate}
         self.rat_update = registry.instantiate(
@@ -724,13 +729,21 @@ class SpiderEncoderBertTruncated(torch.nn.Module):
             relations2id=preproc.relations2id,
             hidden_size=self.enc_hidden_size,
         )
+        
+        # aligner
+        self.aligner = rat.AlignmentWithRAT(
+            device=device,
+            hidden_size=self.enc_hidden_size,
+            relations2id=preproc.relations2id,
+            enable_latent_relations=False,
+        )
 
         self.tokenizer = self.preproc.tokenizer
         # self.bert_model.resize_token_embeddings(
         #    len(self.tokenizer)
         # )  # several tokens added
 
-    def forward(self, desc, plm_output, relation):
+    def forward(self, desc, plm_output):
         # TODO: abstract the operations of batching for bert
 
         (q_enc, col_enc, tab_enc) = plm_output
@@ -740,7 +753,7 @@ class SpiderEncoderBertTruncated(torch.nn.Module):
 
         # rat update
         # TODO: change this, question is in the protocal of build relations
-        
+        relation = self.schema_linking(desc)
         (
             q_enc_new_item,
             c_enc_new_item,
@@ -752,11 +765,17 @@ class SpiderEncoderBertTruncated(torch.nn.Module):
             tab_enc.unsqueeze(1),
             relation,
         )
+            
+        # alignment matrix
+        align_mat_item = self.aligner(
+            desc, q_enc_new_item, c_enc_new_item, t_enc_new_item, relation
+        )
         
         return (
             q_enc_new_item,
             c_enc_new_item,
             t_enc_new_item,
+            align_mat_item
         )
     
 @registry.register("encoder", "spider-bert-truncated")

@@ -49,14 +49,12 @@ class DeepEnsembleModelAgnostic(nn.Module):
 
     def ensemble_train(self, model, 
                    model_encoder_params,
-                   model_aligner_params,
                    model_decoder_params, 
                    batch,
                    num_batch_accumulated):
         
         return self.particles_base_train(model, 
                                model_encoder_params, 
-                               model_aligner_params,
                                model_decoder_params, 
                                batch,
                                num_batch_accumulated)
@@ -64,7 +62,6 @@ class DeepEnsembleModelAgnostic(nn.Module):
     def particles_base_train(self, 
                    model, 
                    model_encoder_params,
-                   model_aligner_params,
                    model_decoder_params,
                    batch,
                    num_batch_accumulated):
@@ -77,11 +74,8 @@ class DeepEnsembleModelAgnostic(nn.Module):
             [torch.nn.utils.parameters_to_vector(params) for params in encoder_params],
             dim=0
         )
-        aligner_params = list(model.aligner.parameters())
         decoder_params = list(model.decoder.parameters())
         particle_len = len(encoder_params[0])
-        aligner_len = len(aligner_params)
-        aligner_p_vec = torch.nn.utils.parameters_to_vector(aligner_params)
         decoder_p_vec = torch.nn.utils.parameters_to_vector(decoder_params)
         ret_dic = {}
         for _step in range(self.inner_steps):
@@ -90,7 +84,6 @@ class DeepEnsembleModelAgnostic(nn.Module):
                                              params_matrix.size(1)),
                                        device=self.device)
             # decoder grad vector, store decoder grads
-            alinger_grads_vec = torch.zeros_like(aligner_p_vec)
             decoder_grads_vec = torch.zeros_like(decoder_p_vec)
             enc_input_list = [enc_input for enc_input, dec_output in batch]
             column_pointer_maps = [
@@ -107,15 +100,13 @@ class DeepEnsembleModelAgnostic(nn.Module):
                 # for single input source domain
                 plm_output = model.bert_model(enc_input_list)[0]
                 enc_input, dec_output = batch[0]
-                relation = model.schema_linking(enc_input)
-                relation = model.schema_linking(enc_input)
                 (
                     q_enc_new_item,
                     c_enc_new_item,
                     t_enc_new_item,
+                    align_mat_item,
                 ) = model.list_of_encoders[i](enc_input, 
-                                                    plm_output,
-                                                    relation)
+                                                    plm_output)
                 # attention memory 
                 memory = []
                 include_in_memory = model.list_of_encoders[0].include_in_memory
@@ -126,10 +117,6 @@ class DeepEnsembleModelAgnostic(nn.Module):
                 if "table" in include_in_memory:
                     memory.append(t_enc_new_item)
                 memory = torch.cat(memory, dim=1)
-                # alignment matrix
-                align_mat_item = model.aligner(
-                    enc_input, q_enc_new_item, c_enc_new_item, t_enc_new_item, relation
-                )
         
                 enc_states.append(
                     SpiderEncoderState(
@@ -159,19 +146,14 @@ class DeepEnsembleModelAgnostic(nn.Module):
                 loss = torch.mean(torch.stack(losses, dim=0), dim=0) / num_batch_accumulated
                 final_losses.append(loss.item())
                 enc_dec_grads = torch.autograd.grad(loss, 
-                                                    encoder_params[i] + aligner_params + decoder_params,
+                                                    encoder_params[i] + decoder_params,
                                                     allow_unused=True)
                 particle_grads = enc_dec_grads[:particle_len]
-                aligner_grads = list(enc_dec_grads[particle_len:particle_len + aligner_len])
-                for idx, g in enumerate(aligner_grads):
-                    if g is None:
-                        aligner_grads[idx] = torch.zeros_like(aligner_params[idx])
-                decoder_grads = list(enc_dec_grads[particle_len + aligner_len:])
+                decoder_grads = list(enc_dec_grads[particle_len:])
                 for idx, g in enumerate(decoder_grads):
                     if g is None:
                         decoder_grads[idx] = torch.zeros_like(decoder_params[idx])
-                alinger_grads_vec = alinger_grads_vec + (1/(self.num_particles*self.num_particles))*torch.nn.utils.parameters_to_vector(aligner_grads)
-                decoder_grads_vec = decoder_grads_vec + (1/(self.num_particles*self.num_particles))*torch.nn.utils.parameters_to_vector(decoder_grads)
+                decoder_grads_vec = decoder_grads_vec + (1/self.num_particles)*torch.nn.utils.parameters_to_vector(decoder_grads)
                 
                 distance_nll[i, :] = torch.nn.utils.parameters_to_vector(particle_grads)
             
@@ -179,17 +161,13 @@ class DeepEnsembleModelAgnostic(nn.Module):
                                               num_of_particles=self.num_particles)
             
             # compute inner gradients with rbf kernel
-            encoders_grads = (1/self.num_particles)*(torch.matmul(kernel_matrix, distance_nll) - grad_kernel)
+            encoders_grads = torch.matmul(kernel_matrix, distance_nll) - grad_kernel
             # copy inner_grads to main network
             for i in range(self.num_particles):
                 for p_tar, p_src in zip(model_encoder_params[i],
                                         DeepEnsembleModelAgnostic.vector_to_list_params(encoders_grads[i],
                                                                                              model_encoder_params[i])):
                     p_tar.grad.data.add_(p_src) # todo: divide by num_of_sample if inner is in ba
-            # copy aligner grads to the main network
-            for p_tar, p_src in zip(model_aligner_params,
-                            DeepEnsembleModelAgnostic.vector_to_list_params(alinger_grads_vec, model_aligner_params)):
-                p_tar.grad.data.add_(p_src)
             # copy decoder grads to the main network
             for p_tar, p_src in zip(model_decoder_params,
                             DeepEnsembleModelAgnostic.vector_to_list_params(decoder_grads_vec, model_decoder_params)):
