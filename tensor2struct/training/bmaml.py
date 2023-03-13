@@ -114,8 +114,6 @@ class BayesModelAgnosticMetaLearning(nn.Module):
                 # for single input source domain
                 plm_output = inner_model.bert_model(enc_input_list)[0]
                 enc_input, dec_output = inner_batch[0]
-                relation = inner_model.schema_linking(enc_input)
-                relation = inner_model.schema_linking(enc_input)
                 (
                     q_enc_new_item,
                     c_enc_new_item,
@@ -133,10 +131,6 @@ class BayesModelAgnosticMetaLearning(nn.Module):
                 if "table" in include_in_memory:
                     memory.append(t_enc_new_item)
                 memory = torch.cat(memory, dim=1)
-                # alignment matrix
-                align_mat_item = inner_model.aligner(
-                    enc_input, q_enc_new_item, c_enc_new_item, t_enc_new_item, relation
-                )
         
                 enc_states.append(
                     SpiderEncoderState(
