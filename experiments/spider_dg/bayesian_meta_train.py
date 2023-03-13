@@ -117,8 +117,7 @@ class BayesianMetaTrainer(bayesian_meta_train.BMetaTrainer):
             for i in range(self.train_config.num_particles):
                 model_encoder_params.append(list(self.model.list_of_encoders[i].parameters()))
             
-            # alignment matrix params
-            model_aligner_params = list(self.model.aligner.parameters())
+            # decoder matrix params
             model_decoder_params = list(self.model.decoder.parameters())
             for _i in range(self.train_config.num_batch_accumulated):
                 task = train_data_scheduler.get_batch(last_step)
@@ -126,7 +125,6 @@ class BayesianMetaTrainer(bayesian_meta_train.BMetaTrainer):
                 ret_dic = maml_trainer.meta_train(
                     self.model, 
                     model_encoder_params, 
-                    model_aligner_params,
                     model_decoder_params, 
                     inner_batch, 
                     outer_batches
