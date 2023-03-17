@@ -93,12 +93,14 @@ class DEMATrainer(train.Trainer):
                 model_encoder_params.append(list(self.model.list_of_encoders[i].parameters()))
             
             # decoder params
+            model_aligner_params = list(self.model.aligner.parameters())
             model_decoder_params = list(self.model.decoder.parameters())
             for _i in range(self.train_config.num_batch_accumulated):
                 batch = next(train_data_loader)
                 ret_dic = dema_trainer.ensemble_train(
                     self.model,
                     model_encoder_params,
+                    model_aligner_params,
                     model_decoder_params,
                     batch,
                     self.train_config.num_batch_accumulated
