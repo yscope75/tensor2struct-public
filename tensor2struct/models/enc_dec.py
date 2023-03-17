@@ -463,7 +463,6 @@ class BSemiBatchedEncDecModelV2(torch.nn.Module):
                     q_enc_new_item,
                     c_enc_new_item,
                     t_enc_new_item,
-                    align_mat_item,
                 ) = self.list_of_encoders[i](enc_input, sample_embed, relation)
                 q_particle_list.append(q_enc_new_item)
                 c_particle_list.append(c_enc_new_item)
