@@ -60,11 +60,13 @@ class BayesModelAgnosticMetaLearning(nn.Module):
 
     def meta_train(self, model, 
                    model_encoder_params,
+                   model_aligner_params,
                    model_decoder_params, 
                    inner_batch, outer_batches):
         assert not self.first_order
         return self.maml_train(model, 
                                model_encoder_params, 
+                               model_aligner_params,
                                model_decoder_params, 
                                inner_batch, 
                                outer_batches)
@@ -72,6 +74,7 @@ class BayesModelAgnosticMetaLearning(nn.Module):
     def maml_train(self, 
                    model, 
                    model_encoder_params,
+                   model_aligner_params,
                    model_decoder_params,
                    inner_batch, 
                    outer_batches):
@@ -88,8 +91,11 @@ class BayesModelAgnosticMetaLearning(nn.Module):
             [torch.nn.utils.parameters_to_vector(params) for params in inner_encoder_params],
             dim=0
         )
+        inner_aligner_params = list(inner_model.aligner.parameters())
         inner_decoder_params = list(inner_model.decoder.parameters())
         particle_len = len(inner_encoder_params[0])
+        aligner_len = len(inner_aligner_params)
+        inner_aligner_p_vec = torch.nn.utils.parameters_to_vector(inner_aligner_params)
         inner_decoder_p_vec = torch.nn.utils.parameters_to_vector(inner_decoder_params)
         ret_dic = {}
         for _step in range(self.inner_steps):
@@ -98,6 +104,7 @@ class BayesModelAgnosticMetaLearning(nn.Module):
                                              inner_params_matrix.size(1)),
                                        device=self.device)
             # decoder grad vector, store decoder grads on inner loop
+            alinger_grads_vec = torch.zeros_like(inner_aligner_p_vec)
             decoder_grads_vec = torch.zeros_like(inner_decoder_p_vec)
             enc_input_list = [enc_input for enc_input, dec_output in inner_batch]
             column_pointer_maps = [
@@ -114,13 +121,14 @@ class BayesModelAgnosticMetaLearning(nn.Module):
                 # for single input source domain
                 plm_output = inner_model.bert_model(enc_input_list)[0]
                 enc_input, dec_output = inner_batch[0]
+                relation = inner_model.schema_linking(enc_input)
                 (
                     q_enc_new_item,
                     c_enc_new_item,
                     t_enc_new_item,
-                    align_mat_item,
                 ) = inner_model.list_of_encoders[i](enc_input, 
-                                                    plm_output)
+                                                    plm_output,
+                                                    relation)
                 # attention memory 
                 memory = []
                 include_in_memory = inner_model.list_of_encoders[0].include_in_memory
@@ -131,7 +139,10 @@ class BayesModelAgnosticMetaLearning(nn.Module):
                 if "table" in include_in_memory:
                     memory.append(t_enc_new_item)
                 memory = torch.cat(memory, dim=1)
-        
+                # alignment matrix
+                align_mat_item = inner_model.aligner(
+                    enc_input, q_enc_new_item, c_enc_new_item, t_enc_new_item, relation
+                )
                 enc_states.append(
                     SpiderEncoderState(
                         state=None,
@@ -206,17 +217,20 @@ class BayesModelAgnosticMetaLearning(nn.Module):
                 loss = torch.mean(torch.stack(losses, dim=0), dim=0)
                 inner_loss.append(loss.item())
                 enc_dec_grads = torch.autograd.grad(loss, 
-                                                    inner_encoder_params[i] + inner_decoder_params,
+                                                    inner_encoder_params[i] + inner_aligner_params + inner_decoder_params,
                                                     allow_unused=True)
-                particle_grads = list(enc_dec_grads[:particle_len])
-                for idx, g in enumerate(particle_grads):
+                particle_grads = enc_dec_grads[:particle_len]
+                aligner_grads = list(enc_dec_grads[particle_len:particle_len + aligner_len])
+                for idx, g in enumerate(aligner_grads):
                     if g is None:
-                        particle_grads[idx] = torch.zeros_like(inner_encoder_params[i][idx])
-                decoder_grads = list(enc_dec_grads[particle_len:])
+                        aligner_grads[idx] = torch.zeros_like(inner_aligner_params[idx])
+                decoder_grads = list(enc_dec_grads[particle_len + aligner_len:])
                 for idx, g in enumerate(decoder_grads):
                     if g is None:
                         decoder_grads[idx] = torch.zeros_like(inner_decoder_params[idx])
-                decoder_grads_vec = decoder_grads_vec + (1/self.num_particles)*torch.nn.utils.parameters_to_vector(decoder_grads)
+                        
+                alinger_grads_vec = alinger_grads_vec + (1/(self.num_particles*self.num_particles))*torch.nn.utils.parameters_to_vector(aligner_grads)
+                decoder_grads_vec = decoder_grads_vec + (1/(self.num_particles*self.num_particles))*torch.nn.utils.parameters_to_vector(decoder_grads)
                 
                 distance_nll[i, :] = torch.nn.utils.parameters_to_vector(particle_grads)
             
@@ -224,12 +238,15 @@ class BayesModelAgnosticMetaLearning(nn.Module):
                                               num_of_particles=self.num_particles)
             
             # compute inner gradients with rbf kernel
-            inner_grads = torch.matmul(kernel_matrix, distance_nll) - grad_kernel
+            inner_grads = (1/self.num_particles)*(torch.matmul(kernel_matrix, distance_nll) - grad_kernel)
             # update inner_net parameters 
             inner_params_matrix = inner_params_matrix - self.inner_lr*inner_grads
             for i in range(self.num_particles):
                 torch.nn.utils.vector_to_parameters(inner_params_matrix[i],
                                                     inner_encoder_params[i])
+            # update aligner parameters
+            inner_aligner_p_vec = inner_aligner_p_vec - self.inner_lr*alinger_grads_vec
+            torch.nn.utils.vector_to_parameters(inner_aligner_p_vec, inner_aligner_params)
             # update decoder parameters
             inner_decoder_p_vec = inner_decoder_p_vec - self.inner_lr*decoder_grads_vec
             torch.nn.utils.vector_to_parameters(inner_decoder_p_vec, inner_decoder_params)
@@ -239,6 +256,10 @@ class BayesModelAgnosticMetaLearning(nn.Module):
                                         BayesModelAgnosticMetaLearning.vector_to_list_params(inner_grads[i],
                                                                                              model_encoder_params[i])):
                     p_tar.grad.data.add_(p_src) # todo: divide by num_of_sample if inner is in ba
+            # copy aligner grads to the main network
+            for p_tar, p_src in zip(model_aligner_params,
+                            BayesModelAgnosticMetaLearning.vector_to_list_params(alinger_grads_vec, model_aligner_params)):
+                p_tar.grad.data.add_(p_src)
             # copy decoder grads to the main network
             for p_tar, p_src in zip(model_decoder_params,
                             BayesModelAgnosticMetaLearning.vector_to_list_params(decoder_grads_vec, model_decoder_params)):
