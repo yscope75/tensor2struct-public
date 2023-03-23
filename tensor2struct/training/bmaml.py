@@ -229,16 +229,16 @@ class BayesModelAgnosticMetaLearning(nn.Module):
                     if g is None:
                         decoder_grads[idx] = torch.zeros_like(inner_decoder_params[idx])
                         
-                alinger_grads_vec = alinger_grads_vec + (1/(self.num_particles*self.num_particles))*torch.nn.utils.parameters_to_vector(aligner_grads)
-                decoder_grads_vec = decoder_grads_vec + (1/(self.num_particles*self.num_particles))*torch.nn.utils.parameters_to_vector(decoder_grads)
+                alinger_grads_vec = alinger_grads_vec + (1/self.num_particles)*torch.nn.utils.parameters_to_vector(aligner_grads)
+                decoder_grads_vec = decoder_grads_vec + (1/self.num_particles)*torch.nn.utils.parameters_to_vector(decoder_grads)
                 
                 distance_nll[i, :] = torch.nn.utils.parameters_to_vector(particle_grads)
             
-            kernel_matrix, grad_kernel, _ = BayesModelAgnosticMetaLearning.get_kernel(params=inner_params_matrix,
+            kernel_matrix, grad_kernel, _ = BayesModelAgnosticMetaLearning.get_kernel_wSGLD_B(params=inner_params_matrix,
                                               num_of_particles=self.num_particles)
             
             # compute inner gradients with rbf kernel
-            inner_grads = (1/self.num_particles)*(torch.matmul(kernel_matrix, distance_nll) - grad_kernel)
+            inner_grads = distance_nll - grad_kernel
             # update inner_net parameters 
             inner_params_matrix = inner_params_matrix - self.inner_lr*inner_grads
             for i in range(self.num_particles):
@@ -324,7 +324,35 @@ class BayesModelAgnosticMetaLearning(nn.Module):
         grad_kernel /= h
 
         return kernel_matrix, grad_kernel, h
-
+    
+    @staticmethod
+    def get_kernel_wSGLD_B(params: torch.Tensor, num_of_particles):
+        """
+        Compute the RBF kernel and repulsive term for wSGLD 
+        
+        Args:
+            params: a tensor of shape (N, M)
+        
+        Returns: 
+            - kernel_matrix = tensor of shape (N, N)
+            - repulsive term 
+        """
+        pairwise_d_matrix = BayesModelAgnosticMetaLearning.get_pairwise_distance_matrix(x=params)
+        median_dist = torch.quantile(input=pairwise_d_matrix, q=0.5)
+        h = median_dist / np.log(num_of_particles)
+        kernel_matrix = torch.exp(-pairwise_d_matrix / h)
+        kernel_sum = torch.sum(input=kernel_matrix, dim=1, keepdim=True)
+        # compute repulsive term of w_SGLD_B 
+        # invert of kernel_sum Nx1 
+        invert_kernel_sum = kernel_sum.pow_(-1) 
+        grad_kernel = params*(torch.matmul(kernel_matrix, invert_kernel_sum) +
+                                torch.sum(kernel_matrix*invert_kernel_sum, dim=1, keepdim=True))
+        grad_kernel += -(torch.matmul(kernel_matrix*torch.transpose(invert_kernel_sum,0,1), params) +
+                         torch.matmul(kernel_matrix, params)*invert_kernel_sum)
+        grad_kernel /= h
+        
+        return kernel_matrix, grad_kernel, h
+    
     @staticmethod
     def get_pairwise_distance_matrix(x: torch.Tensor) -> torch.Tensor:
         """Calculate the pairwise distance between each row of tensor x
