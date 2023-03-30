@@ -27,7 +27,6 @@ setup(
         "jsonnet~=0.11.2",
         "nltk~=3.4",
         "networkx~=2.2",
-        "numpy>=1.15",
         "records~=0.5.3",
         "sacrebleu~=1.5.0",
         "sentencepiece~=0.1.95",
