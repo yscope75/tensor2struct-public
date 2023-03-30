@@ -31,7 +31,7 @@ setup(
         "records~=0.5.3",
         "sacrebleu~=1.5.0",
         "sentencepiece~=0.1.95",
-        "spacy==2.3.2",
+        "spacy==2.3.7",
         "scipy~=1.5.2",
         "stanza~=1.0.0",
         "spacy-stanza==0.2.0",
