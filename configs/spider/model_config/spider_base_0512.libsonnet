@@ -200,6 +200,10 @@ function(args={}, data_path=_data_path) {
         // slow_parameters: $.args.slow_parameters,
     },
 
+    dema_train: $.train + {
+        num_particles: $.args.num_particles,
+    },
+
     meta_test: $.meta_train + {
         data_scheduler: {
             name: "random_scheduler_meta_test",

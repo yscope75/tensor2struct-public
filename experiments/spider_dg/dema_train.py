@@ -26,7 +26,7 @@ class MetaTrainConfig(dema_train.DEMATrainConfig):
 class DEMATrainer(dema_train.DEMATrainer):
     def load_train_config(self):
         self.train_config = registry.instantiate(
-            MetaTrainConfig, self.config["train"]
+            MetaTrainConfig, self.config["dema_train"]
         )
 
         if self.train_config.num_batch_accumulated > 1:

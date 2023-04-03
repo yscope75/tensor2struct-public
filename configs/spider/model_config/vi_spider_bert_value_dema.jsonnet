@@ -44,7 +44,7 @@ function(args, data_path=_data_path) spider_base(args, data_path=_data_path) {
             },
             rat_config: {
                 name: "rat",
-                num_heads: 8,
+                num_heads: 1,
                 num_layers: $.args.num_layers,
                 enable_latent_relations: false,
             },
