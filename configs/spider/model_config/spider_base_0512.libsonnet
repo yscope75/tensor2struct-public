@@ -204,7 +204,7 @@ function(args={}, data_path=_data_path) {
         num_particles: $.args.num_particles,
     },
 
-    bayesian_meta_train: $.train + {
+    bayesian_meta_train: $.meta_train + {
         num_particles: $.args.num_particles,
     },
 
