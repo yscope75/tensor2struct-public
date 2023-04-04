@@ -204,6 +204,10 @@ function(args={}, data_path=_data_path) {
         num_particles: $.args.num_particles,
     },
 
+    bayesian_meta_train: $.train + {
+        num_particles: $.args.num_particles,
+    },
+
     meta_test: $.meta_train + {
         data_scheduler: {
             name: "random_scheduler_meta_test",
