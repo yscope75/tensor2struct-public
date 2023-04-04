@@ -237,7 +237,7 @@ class BayesModelAgnosticMetaLearning(nn.Module):
             kernel_matrix, grad_kernel, _ = BayesModelAgnosticMetaLearning.get_kernel_wSGLD_B(params=inner_params_matrix,
                                               num_of_particles=self.num_particles)
             
-            print("size of distance_nll: {distance_nll.size()}")
+            print(f"size of distance_nll: {distance_nll.size()}")
             # compute inner gradients with rbf kernel
             inner_grads = distance_nll - grad_kernel
             # update inner_net parameters 
