@@ -111,7 +111,7 @@ function(args={}, data_path=_data_path) {
                 },
             rat_config: {
                 name: 'rat',
-                num_heads: 1,
+                num_heads: 8,
                 num_layers: $.args.num_layers,
                 enable_latent_relations: $.args.use_latent_relations,
                 num_latent_relations: $.args.num_latent_relations,
