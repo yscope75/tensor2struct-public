@@ -28,7 +28,7 @@ class MetaTrainConfig(meta_train.MetaTrainConfig):
 class BayesianMetaTrainer(bayesian_meta_train.BMetaTrainer):
     def load_train_config(self):
         self.train_config = registry.instantiate(
-            MetaTrainConfig, self.config["meta_train"]
+            MetaTrainConfig, self.config["bayesian_meta_train"]
         )
 
         if self.train_config.num_batch_accumulated > 1:
