@@ -240,7 +240,6 @@ class BayesModelAgnosticMetaLearning(nn.Module):
                 gc.collect()
                 torch.cuda.empty_cache()
                 
-            logger.info(f"distance nll size: {distance_nll.size()}")
             grad_kernel, _ = BayesModelAgnosticMetaLearning.get_kernel_wSGLD_B(params=inner_params_matrix,
                                               num_of_particles=self.num_particles)
             
