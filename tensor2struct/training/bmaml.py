@@ -355,7 +355,8 @@ class BayesModelAgnosticMetaLearning(nn.Module):
         grad_kernel += -(torch.matmul(kernel_matrix*torch.transpose(invert_kernel_sum,0,1), params) +
                          torch.matmul(kernel_matrix, params)*invert_kernel_sum)
         grad_kernel /= h
-        
+        del kernel_matrix
+        gc.collect()
         return grad_kernel, h
     
     @staticmethod
