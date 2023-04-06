@@ -257,6 +257,11 @@ class BayesModelAgnosticMetaLearning(nn.Module):
             # update decoder parameters
             inner_decoder_p_vec = inner_decoder_p_vec - self.inner_lr*decoder_grads_vec
             torch.nn.utils.vector_to_parameters(inner_decoder_p_vec, inner_decoder_params)
+            # clear var for saving memory
+            del inner_aligner_p_vec
+            del inner_decoder_p_vec
+            del inner_aligner_params
+            del inner_decoder_params
             # copy inner_grads to main network
             for i in range(self.num_particles):
                 for p_tar, p_src in zip(model_encoder_params[i],
