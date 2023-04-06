@@ -5,7 +5,7 @@ import torch.nn as nn
 import numpy as np
 import torch.autograd as autograd 
 import collections
-
+import gc
 import copy
 import logging
 
@@ -233,8 +233,14 @@ class BayesModelAgnosticMetaLearning(nn.Module):
                 decoder_grads_vec = decoder_grads_vec + (1/self.num_particles)*torch.nn.utils.parameters_to_vector(decoder_grads)
                 
                 distance_nll[i, :] = torch.nn.utils.parameters_to_vector(particle_grads)
-            
-            kernel_matrix, grad_kernel, _ = BayesModelAgnosticMetaLearning.get_kernel_wSGLD_B(params=inner_params_matrix,
+                del particle_grads
+                del aligner_grads
+                del decoder_grads
+                del enc_dec_grads
+                gc.collect()
+                torch.cuda.empty_cache()
+                
+            grad_kernel, _ = BayesModelAgnosticMetaLearning.get_kernel_wSGLD_B(params=inner_params_matrix,
                                               num_of_particles=self.num_particles)
             
             # compute inner gradients with rbf kernel
@@ -297,7 +303,6 @@ class BayesModelAgnosticMetaLearning(nn.Module):
         final_loss = sum(inner_loss)/self.num_particles + mean_outer_loss.item()
         ret_dic["loss"] = final_loss
         del inner_model
-        import gc
         gc.collect()
         
         return ret_dic
@@ -351,7 +356,7 @@ class BayesModelAgnosticMetaLearning(nn.Module):
                          torch.matmul(kernel_matrix, params)*invert_kernel_sum)
         grad_kernel /= h
         
-        return kernel_matrix, grad_kernel, h
+        return grad_kernel, h
     
     @staticmethod
     def get_pairwise_distance_matrix(x: torch.Tensor) -> torch.Tensor:
