@@ -239,7 +239,7 @@ class BayesModelAgnosticMetaLearning(nn.Module):
             del decoder_grads
             del enc_dec_grads
             gc.collect()
-            torch.cuda.empty_cache()
+            
             grad_kernel, _ = BayesModelAgnosticMetaLearning.get_kernel_wSGLD_B(params=inner_params_matrix,
                                               num_of_particles=self.num_particles)
             
@@ -250,6 +250,7 @@ class BayesModelAgnosticMetaLearning(nn.Module):
             for i in range(self.num_particles):
                 torch.nn.utils.vector_to_parameters(inner_params_matrix[i],
                                                     inner_encoder_params[i])
+            del inner_params_matrix
             # update aligner parameters
             inner_aligner_p_vec = inner_aligner_p_vec - self.inner_lr*alinger_grads_vec
             torch.nn.utils.vector_to_parameters(inner_aligner_p_vec, inner_aligner_params)
@@ -304,6 +305,7 @@ class BayesModelAgnosticMetaLearning(nn.Module):
         ret_dic["loss"] = final_loss
         del inner_model
         gc.collect()
+        torch.cuda.empty_cache()
         
         return ret_dic
     
