@@ -238,8 +238,8 @@ class BayesModelAgnosticMetaLearning(nn.Module):
                 del decoder_grads
                 del enc_dec_grads
                 gc.collect()
-                torch.cuda.empty_cache()
                 
+            torch.cuda.empty_cache()
             grad_kernel, _ = BayesModelAgnosticMetaLearning.get_kernel_wSGLD_B(params=inner_params_matrix,
                                               num_of_particles=self.num_particles)
             
