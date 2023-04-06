@@ -277,6 +277,9 @@ class BayesModelAgnosticMetaLearning(nn.Module):
                             BayesModelAgnosticMetaLearning.vector_to_list_params(decoder_grads_vec, model_decoder_params)):
                 p_tar.grad.data.add_(p_src)
             # trying to free gpu memory 
+            del inner_grads
+            del alinger_grads_vec
+            del decoder_grads_vec
             # not sure it would help
             # del kernel_matrix
             # del grad_kernel
