@@ -255,20 +255,20 @@ class BayesModelAgnosticMetaLearning(nn.Module):
                 table_pointer_maps = [
                     {i: [i] for i in range(len(desc["tables"]))} for desc in enc_outer_list
                 ]
-                plm_output = inner_model.bert_model(enc_outer_list)
+                plm_output = model.bert_model(enc_outer_list)
                 enc_states = []
                 for idx, (enc_input, plm_out) in enumerate(zip(enc_outer_list, plm_output)):
-                    relation = inner_model.schema_linking(enc_input)
+                    relation = model.schema_linking(enc_input)
                     (
                         q_enc_new_item,
                         c_enc_new_item,
                         t_enc_new_item,
-                    ) = inner_model.list_of_encoders[i](enc_input, 
+                    ) = inner_encoders[i](enc_input, 
                                                         plm_out,
                                                         relation)
                     # attention memory 
                     memory = []
-                    include_in_memory = inner_model.list_of_encoders[0].include_in_memory
+                    include_in_memory = inner_encoders[0].include_in_memory
                     if "question" in include_in_memory:
                         memory.append(q_enc_new_item)
                     if "column" in include_in_memory:
@@ -277,14 +277,14 @@ class BayesModelAgnosticMetaLearning(nn.Module):
                         memory.append(t_enc_new_item)
                     memory = torch.cat(memory, dim=1)
                     # alignment matrix
-                    align_mat_item = inner_model.aligner(
+                    align_mat_item = inner_aligner(
                         enc_input, q_enc_new_item, c_enc_new_item, t_enc_new_item, relation
                     )
                     enc_states.append(
                         SpiderEncoderState(
                             state=None,
                             words_for_copying=enc_input["question_for_copying"],
-                            tokenizer=inner_model.list_of_encoders[0].tokenizer,
+                            tokenizer=inner_encoders[0].tokenizer,
                             memory=memory,
                             question_memory=q_enc_new_item,
                             schema_memory=torch.cat((c_enc_new_item, t_enc_new_item), dim=1),
@@ -302,7 +302,7 @@ class BayesModelAgnosticMetaLearning(nn.Module):
                     )
                 losses = []
                 for enc_state, (enc_input, dec_output) in zip(enc_states, outer_batch):
-                    ret_dic = inner_model.decoder(dec_output, enc_state)
+                    ret_dic = inner_decoder(dec_output, enc_state)
                     losses.append(ret_dic["loss"])
                 loss = torch.mean(torch.stack(losses, dim=0), dim=0)
                 mean_outer_loss += loss
@@ -342,7 +342,9 @@ class BayesModelAgnosticMetaLearning(nn.Module):
         # del grad_outer
         final_loss = (sum(inner_loss) + sum(loss_over_pars))/self.num_particles
         ret_dic["loss"] = final_loss
-        del inner_model
+        del inner_encoders
+        del inner_aligner
+        del inner_decoder
         gc.collect()
         # torch.cuda.empty_cache()
         
