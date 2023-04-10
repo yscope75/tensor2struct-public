@@ -304,7 +304,7 @@ class BayesModelAgnosticMetaLearning(nn.Module):
                 table_pointer_maps = [
                     {i: [i] for i in range(len(desc["tables"]))} for desc in enc_outer_list
                 ]
-                plm_output = inner_model.bert_model(enc_input_list)
+                plm_output = inner_model.bert_model(enc_outer_list)
                 enc_states = []
                 for idx, (enc_input, plm_out) in enumerate(zip(enc_input_list, plm_output)):
                     relation = inner_model.schema_linking(enc_input)
