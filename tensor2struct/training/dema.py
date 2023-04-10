@@ -106,7 +106,7 @@ class DeepEnsembleModelAgnostic(nn.Module):
                 # for single input source domain
                 plm_output = model.bert_model(enc_input_list)
                 enc_states = []
-                for enc_input, plm_out in zip(enc_input_list, plm_output):
+                for idx, (enc_input, plm_out) in enumerate(zip(enc_input_list, plm_output)):
                     relation = model.schema_linking(enc_input)
                     (
                         q_enc_new_item,
@@ -142,8 +142,8 @@ class DeepEnsembleModelAgnostic(nn.Module):
                                 "table": t_enc_new_item,
                             },
                             pointer_maps={
-                                "column": column_pointer_maps[0],
-                                "table": table_pointer_maps[0],
+                                "column": column_pointer_maps[idx],
+                                "table": table_pointer_maps[idx],
                             },
                             m2c_align_mat=align_mat_item[0],
                             m2t_align_mat=align_mat_item[1],
