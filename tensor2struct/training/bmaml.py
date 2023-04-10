@@ -307,7 +307,20 @@ class BayesModelAgnosticMetaLearning(nn.Module):
                 loss = torch.mean(torch.stack(losses, dim=0), dim=0)
                 mean_outer_loss += loss
             mean_outer_loss.div_(len(outer_batches)*self.num_particles)
-            mean_outer_loss.backward(retain_graph=True)
+            mean_outer_loss.backward()
+            # copy inner_grads to main network
+            for i in range(self.num_particles):
+                for p_tar, p_src in zip(model_encoder_params[i],
+                                        inner_encoders[i].parameters()):
+                    p_tar.grad.data.add_(p_src.grad.data) # todo: divide by num_of_sample if inner is in ba
+            # copy aligner grads to the main network
+            for p_tar, p_src in zip(model_aligner_params,
+                                    inner_aligner.parameters()):
+                p_tar.grad.data.add_(p_src.grad.data)
+            # copy decoder grads to the main network
+            for p_tar, p_src in zip(model_decoder_params,
+                                    inner_decoder.parameters()):
+                p_tar.grad.data.add_(p_src.grad.data)
             loss_over_pars.append(mean_outer_loss.item())
         logger.info(f"Outer loss: {sum(loss_over_pars)}")
             # Compute loss on udpated inner model
@@ -322,19 +335,7 @@ class BayesModelAgnosticMetaLearning(nn.Module):
         # grad_outer = autograd.grad(mean_outer_loss, 
         #                            inner_model.parameters(),
         #                            allow_unused=True)
-        # copy inner_grads to main network
-        for i in range(self.num_particles):
-            for p_tar, p_src in zip(model_encoder_params[i],
-                                    inner_encoders[i].parameters()):
-                p_tar.grad.data.add_(p_src.grad.data) # todo: divide by num_of_sample if inner is in ba
-        # copy aligner grads to the main network
-        for p_tar, p_src in zip(model_aligner_params,
-                                inner_aligner.parameters()):
-            p_tar.grad.data.add_(p_src.grad.data)
-        # copy decoder grads to the main network
-        for p_tar, p_src in zip(model_decoder_params,
-                                inner_decoder.parameters()):
-            p_tar.grad.data.add_(p_src.grad.data)
+        
         # for p, g_o in zip(model.parameters(), grad_outer):
         #         if g_o is not None:
         #             p.grad.data.add_(g_o.data)
