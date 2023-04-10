@@ -307,7 +307,7 @@ class BayesModelAgnosticMetaLearning(nn.Module):
                 loss = torch.mean(torch.stack(losses, dim=0), dim=0)
                 mean_outer_loss += loss
             mean_outer_loss.div_(len(outer_batches)*self.num_particles)
-            mean_outer_loss.backward()
+            mean_outer_loss.backward(retain_graph=True)
             loss_over_pars.append(mean_outer_loss.item())
         logger.info(f"Outer loss: {sum(loss_over_pars)}")
             # Compute loss on udpated inner model
