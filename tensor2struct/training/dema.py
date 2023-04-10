@@ -103,52 +103,52 @@ class DeepEnsembleModelAgnostic(nn.Module):
             final_losses = []
             for i in range(self.num_particles):
                 
-                enc_states = []
                 # for single input source domain
-                plm_output = model.bert_model(enc_input_list)[0]
-                enc_input, dec_output = batch[0]
-                relation = model.schema_linking(enc_input)
-                (
-                    q_enc_new_item,
-                    c_enc_new_item,
-                    t_enc_new_item,
-                ) = model.list_of_encoders[i](enc_input, 
-                                                    plm_output,
-                                                    relation)
-                # attention memory 
-                memory = []
-                include_in_memory = model.list_of_encoders[0].include_in_memory
-                if "question" in include_in_memory:
-                    memory.append(q_enc_new_item)
-                if "column" in include_in_memory:
-                    memory.append(c_enc_new_item)
-                if "table" in include_in_memory:
-                    memory.append(t_enc_new_item)
-                memory = torch.cat(memory, dim=1)
-                # alignment matrix
-                align_mat_item = model.aligner(
-                    enc_input, q_enc_new_item, c_enc_new_item, t_enc_new_item, relation
-                )
-                enc_states.append(
-                    SpiderEncoderState(
-                        state=None,
-                        words_for_copying=enc_input["question_for_copying"],
-                        tokenizer=model.list_of_encoders[0].tokenizer,
-                        memory=memory,
-                        question_memory=q_enc_new_item,
-                        schema_memory=torch.cat((c_enc_new_item, t_enc_new_item), dim=1),
-                        pointer_memories={
-                            "column": c_enc_new_item,
-                            "table": t_enc_new_item,
-                        },
-                        pointer_maps={
-                            "column": column_pointer_maps[0],
-                            "table": table_pointer_maps[0],
-                        },
-                        m2c_align_mat=align_mat_item[0],
-                        m2t_align_mat=align_mat_item[1],
+                plm_output = model.bert_model(enc_input_list)
+                enc_states = []
+                for enc_input, plm_out in zip(enc_input_list, plm_output):
+                    relation = model.schema_linking(enc_input)
+                    (
+                        q_enc_new_item,
+                        c_enc_new_item,
+                        t_enc_new_item,
+                    ) = model.list_of_encoders[i](enc_input, 
+                                                        plm_out,
+                                                        relation)
+                    # attention memory 
+                    memory = []
+                    include_in_memory = model.list_of_encoders[0].include_in_memory
+                    if "question" in include_in_memory:
+                        memory.append(q_enc_new_item)
+                    if "column" in include_in_memory:
+                        memory.append(c_enc_new_item)
+                    if "table" in include_in_memory:
+                        memory.append(t_enc_new_item)
+                    memory = torch.cat(memory, dim=1)
+                    # alignment matrix
+                    align_mat_item = model.aligner(
+                        enc_input, q_enc_new_item, c_enc_new_item, t_enc_new_item, relation
                     )
-                )
+                    enc_states.append(
+                        SpiderEncoderState(
+                            state=None,
+                            words_for_copying=enc_input["question_for_copying"],
+                            tokenizer=model.list_of_encoders[0].tokenizer,
+                            memory=memory,
+                            question_memory=q_enc_new_item,
+                            schema_memory=torch.cat((c_enc_new_item, t_enc_new_item), dim=1),
+                            pointer_memories={
+                                "column": c_enc_new_item,
+                                "table": t_enc_new_item,
+                            },
+                            pointer_maps={
+                                "column": column_pointer_maps[0],
+                                "table": table_pointer_maps[0],
+                            },
+                            m2c_align_mat=align_mat_item[0],
+                            m2t_align_mat=align_mat_item[1],
+                        )
+                    )
 
                 losses = []
                 for enc_state, (enc_input, dec_output) in zip(enc_states, batch):
