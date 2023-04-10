@@ -113,56 +113,55 @@ class BayesModelAgnosticMetaLearning(nn.Module):
             table_pointer_maps = [
                 {i: [i] for i in range(len(desc["tables"]))} for desc in enc_input_list
             ]
-            # plm_output = inner_model.bert_model(enc_input_list)
             inner_loss = []
             for i in range(self.num_particles):
                 
-                enc_states = []
                 # for single input source domain
-                plm_output = inner_model.bert_model(enc_input_list)[0]
-                enc_input, dec_output = inner_batch[0]
-                relation = inner_model.schema_linking(enc_input)
-                (
-                    q_enc_new_item,
-                    c_enc_new_item,
-                    t_enc_new_item,
-                ) = inner_model.list_of_encoders[i](enc_input, 
-                                                    plm_output,
-                                                    relation)
-                # attention memory 
-                memory = []
-                include_in_memory = inner_model.list_of_encoders[0].include_in_memory
-                if "question" in include_in_memory:
-                    memory.append(q_enc_new_item)
-                if "column" in include_in_memory:
-                    memory.append(c_enc_new_item)
-                if "table" in include_in_memory:
-                    memory.append(t_enc_new_item)
-                memory = torch.cat(memory, dim=1)
-                # alignment matrix
-                align_mat_item = inner_model.aligner(
-                    enc_input, q_enc_new_item, c_enc_new_item, t_enc_new_item, relation
-                )
-                enc_states.append(
-                    SpiderEncoderState(
-                        state=None,
-                        words_for_copying=enc_input["question_for_copying"],
-                        tokenizer=inner_model.list_of_encoders[0].tokenizer,
-                        memory=memory,
-                        question_memory=q_enc_new_item,
-                        schema_memory=torch.cat((c_enc_new_item, t_enc_new_item), dim=1),
-                        pointer_memories={
-                            "column": c_enc_new_item,
-                            "table": t_enc_new_item,
-                        },
-                        pointer_maps={
-                            "column": column_pointer_maps[0],
-                            "table": table_pointer_maps[0],
-                        },
-                        m2c_align_mat=align_mat_item[0],
-                        m2t_align_mat=align_mat_item[1],
+                plm_output = inner_model.bert_model(enc_input_list)
+                enc_states = []
+                for idx, (enc_input, plm_out) in enumerate(zip(enc_input_list, plm_output)):
+                    relation = inner_model.schema_linking(enc_input)
+                    (
+                        q_enc_new_item,
+                        c_enc_new_item,
+                        t_enc_new_item,
+                    ) = inner_model.list_of_encoders[i](enc_input, 
+                                                        plm_out,
+                                                        relation)
+                    # attention memory 
+                    memory = []
+                    include_in_memory = inner_model.list_of_encoders[0].include_in_memory
+                    if "question" in include_in_memory:
+                        memory.append(q_enc_new_item)
+                    if "column" in include_in_memory:
+                        memory.append(c_enc_new_item)
+                    if "table" in include_in_memory:
+                        memory.append(t_enc_new_item)
+                    memory = torch.cat(memory, dim=1)
+                    # alignment matrix
+                    align_mat_item = inner_model.aligner(
+                        enc_input, q_enc_new_item, c_enc_new_item, t_enc_new_item, relation
                     )
-                )
+                    enc_states.append(
+                        SpiderEncoderState(
+                            state=None,
+                            words_for_copying=enc_input["question_for_copying"],
+                            tokenizer=inner_model.list_of_encoders[0].tokenizer,
+                            memory=memory,
+                            question_memory=q_enc_new_item,
+                            schema_memory=torch.cat((c_enc_new_item, t_enc_new_item), dim=1),
+                            pointer_memories={
+                                "column": c_enc_new_item,
+                                "table": t_enc_new_item,
+                            },
+                            pointer_maps={
+                                "column": column_pointer_maps[idx],
+                                "table": table_pointer_maps[idx],
+                            },
+                            m2c_align_mat=align_mat_item[0],
+                            m2t_align_mat=align_mat_item[1],
+                        )
+                    )
                 
                 # for batch_idx, (enc_input, _) in enumerate(inner_batch):
                 
@@ -292,25 +291,98 @@ class BayesModelAgnosticMetaLearning(nn.Module):
                                 inner_model.parameters()):
             if p_src.grad is not None:
                 p_tgt.grad.data.add_(p_src.grad.data)
-        # Compute loss on udpated inner model
-        mean_outer_loss = torch.Tensor([0.0]).to(self.device)
-        for outer_batch in outer_batches:
-            outer_ret_dict = inner_model(outer_batch)
-            mean_outer_loss += outer_ret_dict["loss"]
-        mean_outer_loss.div_(len(outer_batches))
-        logger.info(f"Outer loss: {mean_outer_loss.item()}")
+        # accumulate to compute mean over particles
+        grad_outer = None
+        loss_over_pars = []
+        for _ in range(self.num_particles):
+            mean_outer_loss = torch.Tensor([0.0]).to(self.device)
+            for outer_batch in outer_batches:
+                enc_outer_list = [enc_input for enc_input, dec_output in outer_batch]
+                column_pointer_maps = [
+                {i: [i] for i in range(len(desc["columns"]))} for desc in enc_outer_list
+                ]
+                table_pointer_maps = [
+                    {i: [i] for i in range(len(desc["tables"]))} for desc in enc_outer_list
+                ]
+                enc_states = []
+                for idx, (enc_input, plm_out) in enumerate(zip(enc_input_list, plm_output)):
+                    relation = inner_model.schema_linking(enc_input)
+                    (
+                        q_enc_new_item,
+                        c_enc_new_item,
+                        t_enc_new_item,
+                    ) = inner_model.list_of_encoders[i](enc_input, 
+                                                        plm_out,
+                                                        relation)
+                    # attention memory 
+                    memory = []
+                    include_in_memory = inner_model.list_of_encoders[0].include_in_memory
+                    if "question" in include_in_memory:
+                        memory.append(q_enc_new_item)
+                    if "column" in include_in_memory:
+                        memory.append(c_enc_new_item)
+                    if "table" in include_in_memory:
+                        memory.append(t_enc_new_item)
+                    memory = torch.cat(memory, dim=1)
+                    # alignment matrix
+                    align_mat_item = inner_model.aligner(
+                        enc_input, q_enc_new_item, c_enc_new_item, t_enc_new_item, relation
+                    )
+                    enc_states.append(
+                        SpiderEncoderState(
+                            state=None,
+                            words_for_copying=enc_input["question_for_copying"],
+                            tokenizer=inner_model.list_of_encoders[0].tokenizer,
+                            memory=memory,
+                            question_memory=q_enc_new_item,
+                            schema_memory=torch.cat((c_enc_new_item, t_enc_new_item), dim=1),
+                            pointer_memories={
+                                "column": c_enc_new_item,
+                                "table": t_enc_new_item,
+                            },
+                            pointer_maps={
+                                "column": column_pointer_maps[idx],
+                                "table": table_pointer_maps[idx],
+                            },
+                            m2c_align_mat=align_mat_item[0],
+                            m2t_align_mat=align_mat_item[1],
+                        )
+                    )
+                losses = []
+                for enc_state, (enc_input, dec_output) in zip(enc_states, outer_batch):
+                    ret_dic = inner_model.decoder(dec_output, enc_state)
+                    losses.append(ret_dic["loss"])
+                loss = torch.mean(torch.stack(losses, dim=0), dim=0)
+                mean_outer_loss += loss
+                loss = (1/self.num_particles)*loss
+                if grad_outer is None:
+                    grad_outer = autograd.grad(loss, 
+                                    inner_model.parameters(),
+                                    allow_unused=True)
+                else:
+                    grad_outer += autograd.grad(loss, 
+                                    inner_model.parameters(),
+                                    allow_unused=True)
+            loss_over_pars.append(mean_outer_loss.item()/len(outer_batches))
+            # Compute loss on udpated inner model
+            # mean_outer_loss = torch.Tensor([0.0]).to(self.device)
+            # for outer_batch in outer_batches:
+            #     outer_ret_dict = inner_model(outer_batch)
+            #     mean_outer_loss += outer_ret_dict["loss"]
+            # mean_outer_loss.div_(len(outer_batches))
+            # logger.info(f"Outer loss: {mean_outer_loss.item()}")
         
         # compute gradients of outer loss
-        grad_outer = autograd.grad(mean_outer_loss, 
-                                   inner_model.parameters(),
-                                   allow_unused=True)
+        # grad_outer = autograd.grad(mean_outer_loss, 
+        #                            inner_model.parameters(),
+        #                            allow_unused=True)
         
         for p, g_o in zip(model.parameters(), grad_outer):
                 if g_o is not None:
                     p.grad.data.add_(g_o.data)
                     
         del grad_outer
-        final_loss = sum(inner_loss)/self.num_particles + mean_outer_loss.item()
+        final_loss = (sum(inner_loss) + sum(loss_over_pars))/self.num_particles
         ret_dic["loss"] = final_loss
         del inner_model
         gc.collect()
