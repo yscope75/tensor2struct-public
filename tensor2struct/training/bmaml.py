@@ -307,7 +307,7 @@ class BayesModelAgnosticMetaLearning(nn.Module):
                 loss = torch.mean(torch.stack(losses, dim=0), dim=0)
                 mean_outer_loss += loss
             mean_outer_loss.div_(len(outer_batches)*self.num_particles)
-            mean_outer_loss.backward()
+            mean_outer_loss.backward(retain_graph=True)
             # copy inner_grads to main network
             for i in range(self.num_particles):
                 for p_tar, p_src in zip(model_encoder_params[i],
