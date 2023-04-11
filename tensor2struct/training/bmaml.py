@@ -93,7 +93,8 @@ class BayesModelAgnosticMetaLearning(nn.Module):
             [torch.nn.utils.parameters_to_vector(params) for params in inner_encoder_params],
             dim=0
         )
-        bert_model_len = len(list(model.bert_model.parameters()))
+        model_bert_params = list(model.bert_model.parameters())
+        bert_model_len = len(model_bert_params)
         inner_aligner_params = list(inner_aligner.parameters())
         inner_decoder_params = list(inner_decoder.parameters())
         particle_len = len(inner_encoder_params[0])
@@ -311,13 +312,13 @@ class BayesModelAgnosticMetaLearning(nn.Module):
             mean_outer_loss.div_(len(outer_batches)*self.num_particles)
             # compute gradients of outer loss
             grad_outer = autograd.grad(mean_outer_loss, 
-                                       model.bert_model.parameter(),
+                                       model.bert_model.parameters(),
                                        + inner_encoder_params[i] 
                                        + inner_aligner_params 
                                        + inner_decoder_params,
                                        allow_unused=True)
             # copy inner_grads to main network
-            for p_tar, p_src in zip(model.bert_model.parameters(),
+            for p_tar, p_src in zip(model_bert_params,
                                     grad_outer[:bert_model_len]):
                 p_tar.grad.data.add_(p_src)
                 
