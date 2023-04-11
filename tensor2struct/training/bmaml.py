@@ -322,28 +322,28 @@ class BayesModelAgnosticMetaLearning(nn.Module):
                 else:
                     p_tar.grad.data.add_(torch.zeros_like(model_bert_params[idx]))
                 
-            for p_tar, p_src in zip(model_encoder_params[i],
+            for idx, (p_tar, p_src) in enumerate(zip(model_encoder_params[i],
                                     grad_outer[bert_model_len:bert_model_len
-                                               +particle_len]):
+                                               +particle_len])):
                 if p_src is not None:
                     p_tar.grad.data.add_(p_src)
                 else:
                     p_tar.grad.data.add_(torch.zeros_like(model_encoder_params[i][idx]))
             # copy aligner grads to the main network
-            for p_tar, p_src in zip(model_aligner_params,
+            for idx, (p_tar, p_src) in enumerate(zip(model_aligner_params,
                                     grad_outer[bert_model_len
                                                +particle_len:bert_model_len
                                                +particle_len
-                                               +aligner_len]):
+                                               +aligner_len])):
                 if p_src is not None:
                     p_tar.grad.data.add_(p_src)
                 else:
                     p_tar.grad.data.add_(torch.zeros_like(model_aligner_params[idx]))
             # copy decoder grads to the main network
-            for p_tar, p_src in zip(model_decoder_params,
+            for idx, (p_tar, p_src) in enumerate(zip(model_decoder_params,
                                     grad_outer[bert_model_len
                                                +particle_len
-                                               +aligner_len:]):
+                                               +aligner_len:])):
                 if p_src is not None:
                     p_tar.grad.data.add_(p_src)
                 else:
