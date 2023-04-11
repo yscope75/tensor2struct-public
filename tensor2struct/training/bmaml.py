@@ -318,7 +318,7 @@ class BayesModelAgnosticMetaLearning(nn.Module):
             bert_outer_grads = grad_outer[:bert_model_len]
             for idx, g in enumerate(bert_outer_grads):
                     if g is None:
-                        bert_outer_grads[idx] = torch.zeros_like(bert_outer_grads[idx])
+                        bert_outer_grads[idx] = torch.zeros_like(model_bert_params[idx])
             for p_tar, p_src in zip(model_bert_params,
                                     bert_outer_grads):
                 p_tar.grad.data.add_(p_src)
