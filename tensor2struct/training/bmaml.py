@@ -120,7 +120,8 @@ class BayesModelAgnosticMetaLearning(nn.Module):
             for i in range(self.num_particles):
                 
                 # for single input source domain
-                plm_output = model.bert_model(enc_input_list)
+                with torch.no_grad():
+                    plm_output = model.bert_model(enc_input_list)
                 enc_states = []
                 for idx, (enc_input, plm_out) in enumerate(zip(enc_input_list, plm_output)):
                     relation = model.schema_linking(enc_input)
