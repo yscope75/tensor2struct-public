@@ -93,7 +93,7 @@ class BayesModelAgnosticMetaLearning(nn.Module):
             [torch.nn.utils.parameters_to_vector(params) for params in inner_encoder_params],
             dim=0
         )
-        bert_model_len = len(model.bert_model.parameters())
+        bert_model_len = len(list(model.bert_model.parameters()))
         inner_aligner_params = list(inner_aligner.parameters())
         inner_decoder_params = list(inner_decoder.parameters())
         particle_len = len(inner_encoder_params[0])
