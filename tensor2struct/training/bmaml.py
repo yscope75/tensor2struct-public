@@ -309,7 +309,7 @@ class BayesModelAgnosticMetaLearning(nn.Module):
             mean_outer_loss.div_(len(outer_batches)*self.num_particles)
             # compute gradients of outer loss
             grad_outer = autograd.grad(mean_outer_loss, 
-                                       model.bert_model.parameters()
+                                       model_bert_params
                                        + inner_encoder_params[i] 
                                        + inner_aligner_params 
                                        + inner_decoder_params,
