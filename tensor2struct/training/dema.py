@@ -5,7 +5,7 @@ import torch.nn as nn
 import numpy as np
 import torch.autograd as autograd 
 import collections
-
+import gc 
 import copy
 import logging
 
@@ -201,7 +201,8 @@ class DeepEnsembleModelAgnostic(nn.Module):
             # del kernel_matrix
             # del grad_kernel
             # del distance_nll
-            # del inner_grads
+            del alinger_grads_vec
+            gc.collect()
             # torch.cuda.empty_cache()
             
         ret_dic["loss"] = sum(final_losses)/self.num_particles
