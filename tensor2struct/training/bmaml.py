@@ -245,7 +245,7 @@ class BayesModelAgnosticMetaLearning(nn.Module):
         logger.info(f"Inner loss: {sum(inner_loss)/self.num_particles}")
         # accumulate to compute mean over particles
         loss_over_pars = []
-        for _ in range(self.num_particles):
+        for i in range(self.num_particles):
             mean_outer_loss = torch.Tensor([0.0]).to(self.device)
             for outer_batch in outer_batches:
                 enc_outer_list = [enc_input for enc_input, dec_output in outer_batch]
@@ -324,15 +324,25 @@ class BayesModelAgnosticMetaLearning(nn.Module):
                 p_tar.grad.data.add_(p_src)
                 
             for p_tar, p_src in zip(model_encoder_params[i],
-                                    grad_outer[bert_model_len:particle_len]):
+                                    grad_outer[bert_model_len:bert_model_len
+                                               +particle_len]):
                 p_tar.grad.data.add_(p_src) # todo: divide by num_of_sample if inner is in ba
             # copy aligner grads to the main network
+            outer_aligner_grad = list(grad_outer[bert_model_len
+                                               +particle_len:bert_model_len
+                                               +particle_len
+                                               +aligner_len])
+            for idx, g in enumerate(outer_aligner_grad):
+                    if g is None:
+                        outer_aligner_grad[idx] = torch.zeros_like(model_aligner_params[idx])
             for p_tar, p_src in zip(model_aligner_params,
-                                    grad_outer[particle_len:aligner_len]):
+                                    outer_aligner_grad):
                 p_tar.grad.data.add_(p_src)
             # copy decoder grads to the main network
             for p_tar, p_src in zip(model_decoder_params,
-                                    grad_outer[aligner_len:]):
+                                    grad_outer[bert_model_len
+                                               +particle_len
+                                               +aligner_len:]):
                 p_tar.grad.data.add_(p_src)
             loss_over_pars.append(mean_outer_loss.item())
         logger.info(f"Outer loss: {sum(loss_over_pars)}")
