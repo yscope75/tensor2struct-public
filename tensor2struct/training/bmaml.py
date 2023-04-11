@@ -323,10 +323,9 @@ class BayesModelAgnosticMetaLearning(nn.Module):
                                     bert_outer_grads):
                 p_tar.grad.data.add_(p_src)
                 
-            for i in range(self.num_particles):
-                for p_tar, p_src in zip(model_encoder_params[i],
-                                        grad_outer[bert_model_len:particle_len]):
-                    p_tar.grad.data.add_(p_src) # todo: divide by num_of_sample if inner is in ba
+            for p_tar, p_src in zip(model_encoder_params[i],
+                                    grad_outer[bert_model_len:particle_len]):
+                p_tar.grad.data.add_(p_src) # todo: divide by num_of_sample if inner is in ba
             # copy aligner grads to the main network
             for p_tar, p_src in zip(model_aligner_params,
                                     grad_outer[particle_len:aligner_len]):
