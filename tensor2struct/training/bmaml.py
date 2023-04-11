@@ -315,7 +315,7 @@ class BayesModelAgnosticMetaLearning(nn.Module):
                                        + inner_decoder_params,
                                        allow_unused=True)
             # copy inner_grads to main network
-            bert_outer_grads = grad_outer[:bert_model_len]
+            bert_outer_grads = list(grad_outer[:bert_model_len])
             for idx, g in enumerate(bert_outer_grads):
                     if g is None:
                         bert_outer_grads[idx] = torch.zeros_like(model_bert_params[idx])
