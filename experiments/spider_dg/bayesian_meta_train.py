@@ -142,7 +142,6 @@ class BayesianMetaTrainer(bayesian_meta_train.BMetaTrainer):
 
 
             optimizer.step()
-            optimizer.zero_grad()
 
             # log lr for each step
             outer_lr = lr_scheduler.update_lr(last_step)

@@ -80,9 +80,6 @@ class BayesModelAgnosticMetaLearning(nn.Module):
                    outer_batches):
         assert model.training
         # clone model for inner gradients computing
-        for p in model.parameters():
-            if p.grad is None:
-                p.grad = torch.zeros_like(p)
         inner_encoders = copy.deepcopy(model.list_of_encoders)
         inner_aligner = copy.deepcopy(model.aligner)
         inner_decoder = copy.deepcopy(model.decoder)
@@ -312,7 +309,7 @@ class BayesModelAgnosticMetaLearning(nn.Module):
             mean_outer_loss.div_(len(outer_batches)*self.num_particles)
             # compute gradients of outer loss
             grad_outer = autograd.grad(mean_outer_loss, 
-                                       model.bert_model.parameters(),
+                                       model.bert_model.parameters()
                                        + inner_encoder_params[i] 
                                        + inner_aligner_params 
                                        + inner_decoder_params,
