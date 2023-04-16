@@ -378,8 +378,8 @@ class BayesModelAgnosticMetaLearning(nn.Module):
         ret_dic["loss"] = final_loss
         # del inner_encoders
         # del inner_aligner
-        del inner_decoder
-        gc.collect()
+        # del inner_decoder
+        # gc.collect()
         # torch.cuda.empty_cache()
         
         return ret_dic
