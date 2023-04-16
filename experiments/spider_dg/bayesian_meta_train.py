@@ -107,19 +107,15 @@ class BayesianMetaTrainer(bayesian_meta_train.BMetaTrainer):
         optimizer,
         lr_scheduler,
         last_step,
+        model_encoder_params,
+        model_aligner_params,
+        model_decoder_params,
     ):
         with self.model_random:
             
             for p in self.model.parameters():
-                if p.grad is None:
-                    p.grad = torch.zeros_like(p)
-            model_encoder_params = []
-            for i in range(self.train_config.num_particles):
-                model_encoder_params.append(list(self.model.list_of_encoders[i].parameters()))
+                p.grad = torch.zeros_like(p)
             
-            model_aligner_params = list(self.model.aligner.parameters())
-            # decoder matrix params
-            model_decoder_params = list(self.model.decoder.parameters())
             for _i in range(self.train_config.num_batch_accumulated):
                 task = train_data_scheduler.get_batch(last_step)
                 inner_batch, outer_batches = task

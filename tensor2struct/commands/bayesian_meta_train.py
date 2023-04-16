@@ -135,6 +135,13 @@ class BMetaTrainer(train.Trainer):
         train_data_scheduler = self.load_train_data()
         train_eval_data_loader, val_data_loader = self.load_eval_data()
 
+        model_encoder_params = []
+        for i in range(self.train_config.num_particles):
+            model_encoder_params.append(list(self.model.list_of_encoders[i].parameters()))
+            
+        model_aligner_params = list(self.model.aligner.parameters())
+        # decoder matrix params
+        model_decoder_params = list(self.model.decoder.parameters())
         # 5. Start training loop
         with self.data_random:
             while last_step < self.train_config.max_steps:
@@ -148,6 +155,9 @@ class BMetaTrainer(train.Trainer):
                         optimizer,
                         lr_scheduler,
                         last_step,
+                        model_encoder_params,
+                        model_aligner_params,
+                        model_decoder_params,
                     )
                     last_step += 1
                     self.save_state(saver, modeldir, last_step)
