@@ -86,8 +86,7 @@ class DEMATrainer(train.Trainer):
         with self.model_random:
             non_bert_params = self.model.get_non_bert_parameters()
             for p in non_bert_params:
-                if p.grad is None:
-                    p.grad = torch.zeros_like(p)
+                p.grad = torch.zeros_like(p)
             model_encoder_params = []
             for i in range(self.train_config.num_particles):
                 model_encoder_params.append(list(self.model.list_of_encoders[i].parameters()))
