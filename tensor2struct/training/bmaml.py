@@ -244,7 +244,9 @@ class BayesModelAgnosticMetaLearning(nn.Module):
         logger.info(f"Inner loss: {sum(inner_loss)/self.num_particles}")
         # accumulate to compute mean over particles
         loss_over_pars = []
-        grad_outer = None
+        bert_grad_outer = None
+        aligner_grad_outer = None 
+        decoder_grad_outer = None
         for i in range(self.num_particles):
             mean_outer_loss = torch.Tensor([0.0]).to(self.device)
             for outer_batch in outer_batches:
@@ -308,13 +310,29 @@ class BayesModelAgnosticMetaLearning(nn.Module):
                 mean_outer_loss += loss
             mean_outer_loss.div_(len(outer_batches)*self.num_particles)
             # compute gradients of outer loss
-            if grad_outer is None:
-                grad_outer = autograd.grad(mean_outer_loss, 
+            outer_grads = autograd.grad(mean_outer_loss, 
                                         model_bert_params
                                         + inner_encoder_params[i] 
                                         + inner_aligner_params 
                                         + inner_decoder_params,
                                         allow_unused=True)
+            
+            for idx, (p_tar, p_src) in enumerate(zip(model_encoder_params[i],
+                                    outer_grads[bert_model_len:bert_model_len
+                                                +particle_len]*self.num_particles)):
+                if p_src is not None:
+                    p_tar.grad.data.add_(p_src)
+                else:
+                    p_tar.grad.data.add_(torch.zeros_like(model_encoder_params[i][idx]))
+            if bert_grad_outer is None:
+                bert_grad_outer = outer_grads[:bert_model_len]
+                aligner_grad_outer = outer_grads[bert_model_len
+                                        +particle_len:bert_model_len
+                                        +particle_len
+                                        +aligner_len]
+                decoder_grad_outer = outer_grads[bert_model_len
+                                            +particle_len
+                                            +aligner_len:]
             else: 
                 grad_outer += autograd.grad(mean_outer_loss, 
                                         model_bert_params
@@ -325,34 +343,22 @@ class BayesModelAgnosticMetaLearning(nn.Module):
             loss_over_pars.append(mean_outer_loss.item())
         # copy inner_grads to main network
         for idx, (p_tar, p_src) in enumerate(zip(model_bert_params,
-                                grad_outer[:bert_model_len])):
+                                bert_grad_outer)):
             if p_src is not None:
                 p_tar.grad.data.add_(p_src)
             else:
                 p_tar.grad.data.add_(torch.zeros_like(model_bert_params[idx]))
             
-        for idx, (p_tar, p_src) in enumerate(zip(model_encoder_params[i],
-                                grad_outer[bert_model_len:bert_model_len
-                                            +particle_len])):
-            if p_src is not None:
-                p_tar.grad.data.add_(p_src)
-            else:
-                p_tar.grad.data.add_(torch.zeros_like(model_encoder_params[i][idx]))
         # copy aligner grads to the main network
         for idx, (p_tar, p_src) in enumerate(zip(model_aligner_params,
-                                grad_outer[bert_model_len
-                                            +particle_len:bert_model_len
-                                            +particle_len
-                                            +aligner_len])):
+                                aligner_grad_outer)):
             if p_src is not None:
                 p_tar.grad.data.add_(p_src)
             else:
                 p_tar.grad.data.add_(torch.zeros_like(model_aligner_params[idx]))
         # copy decoder grads to the main network
         for idx, (p_tar, p_src) in enumerate(zip(model_decoder_params,
-                                grad_outer[bert_model_len
-                                            +particle_len
-                                            +aligner_len:])):
+                                decoder_grad_outer)):
             if p_src is not None:
                 p_tar.grad.data.add_(p_src)
             else:
