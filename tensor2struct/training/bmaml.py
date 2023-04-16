@@ -334,12 +334,14 @@ class BayesModelAgnosticMetaLearning(nn.Module):
                                             +particle_len
                                             +aligner_len:]
             else: 
-                grad_outer += autograd.grad(mean_outer_loss, 
-                                        model_bert_params
-                                        + inner_encoder_params[i] 
-                                        + inner_aligner_params 
-                                        + inner_decoder_params,
-                                        allow_unused=True)
+                bert_grad_outer += outer_grads[:bert_model_len]
+                aligner_grad_outer += outer_grads[bert_model_len
+                                        +particle_len:bert_model_len
+                                        +particle_len
+                                        +aligner_len]
+                decoder_grad_outer += outer_grads[bert_model_len
+                                            +particle_len
+                                            +aligner_len:]
             loss_over_pars.append(mean_outer_loss.item())
         # copy inner_grads to main network
         for idx, (p_tar, p_src) in enumerate(zip(model_bert_params,
