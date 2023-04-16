@@ -201,8 +201,8 @@ class DeepEnsembleModelAgnostic(nn.Module):
             # del kernel_matrix
             # del grad_kernel
             # del distance_nll
-            del alinger_grads_vec
-            gc.collect()
+            # del alinger_grads_vec
+            # gc.collect()
             # torch.cuda.empty_cache()
             
         ret_dic["loss"] = sum(final_losses)/self.num_particles

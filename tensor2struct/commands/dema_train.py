@@ -115,7 +115,7 @@ class DEMATrainer(train.Trainer):
                     
             optimizer.step()
             new_lr = lr_scheduler.update_lr(last_step)
-            optimizer.zero_grad()
+            # optimizer.zero_grad()
 
             if new_lr is None:
                 new_lr = [param["lr"] for param in optimizer.param_groups]
