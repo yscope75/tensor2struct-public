@@ -319,7 +319,7 @@ class BayesModelAgnosticMetaLearning(nn.Module):
             
             for idx, (p_tar, p_src) in enumerate(zip(model_encoder_params[i],
                                     outer_grads[bert_model_len:bert_model_len
-                                                +particle_len]*self.num_particles)):
+                                                +particle_len])):
                 if p_src is not None:
                     p_tar.grad.data.add_(p_src)
                 else:
