@@ -43,6 +43,10 @@ class DEMATrainer(train.Trainer):
                 assert len(non_bert_params) + len(bert_params) == len(
                     list(self.model.parameters())
                 )
+                assert len(bert_params) > 0
+                self.logger.info(
+                    f"{len(bert_params)} BERT parameters and {len(non_bert_params)} non-BERT parameters"
+                )
                 optimizer = registry.construct(
                     "optimizer",
                     config["optimizer"],
