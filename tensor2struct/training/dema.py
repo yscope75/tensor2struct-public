@@ -77,133 +77,162 @@ class DeepEnsembleModelAgnostic(nn.Module):
             [torch.nn.utils.parameters_to_vector(params) for params in encoder_params],
             dim=0
         )
-        aligner_params = list(model.aligner.parameters())
-        decoder_params = list(model.decoder.parameters())
-        particle_len = len(encoder_params[0])
-        aligner_len = len(aligner_params)
-        aligner_p_vec = torch.nn.utils.parameters_to_vector(aligner_params)
-        decoder_p_vec = torch.nn.utils.parameters_to_vector(decoder_params)
+        bert_len = len(list(model.bert_model.parameters()))
+        particle_len = len(model_encoder_params[0])
+        aligner_len = len(model_aligner_params)
         ret_dic = {}
-        for _step in range(self.inner_steps):
-            # for computing distance 
-            distance_nll = torch.empty(size=(self.num_particles,
-                                             params_matrix.size(1)),
-                                       device=self.device)
-            # decoder grad vector, store decoder grads
-            alinger_grads_vec = torch.zeros_like(aligner_p_vec)
-            decoder_grads_vec = torch.zeros_like(decoder_p_vec)
-            enc_input_list = [enc_input for enc_input, dec_output in batch]
-            column_pointer_maps = [
-                {i: [i] for i in range(len(desc["columns"]))} for desc in enc_input_list
-            ]
-            table_pointer_maps = [
-                {i: [i] for i in range(len(desc["tables"]))} for desc in enc_input_list
-            ]
+        # for computing distance 
+        distance_nll = torch.empty(size=(self.num_particles,
+                                            params_matrix.size(1)),
+                                    device=self.device)
+        enc_input_list = [enc_input for enc_input, dec_output in batch]
+        column_pointer_maps = [
+            {i: [i] for i in range(len(desc["columns"]))} for desc in enc_input_list
+        ]
+        table_pointer_maps = [
+            {i: [i] for i in range(len(desc["tables"]))} for desc in enc_input_list
+        ]
 
-            final_losses = []
-            with torch.no_grad():
-                plm_output = model.bert_model(enc_input_list)
-            for i in range(self.num_particles):
-                
-                # for single input source domain
-                enc_states = []
-                for idx, (enc_input, plm_out) in enumerate(zip(enc_input_list, plm_output)):
-                    relation = model.schema_linking(enc_input)
-                    (
-                        q_enc_new_item,
-                        c_enc_new_item,
-                        t_enc_new_item,
-                    ) = model.list_of_encoders[i](enc_input, 
-                                                        plm_out,
-                                                        relation)
-                    # attention memory 
-                    memory = []
-                    include_in_memory = model.list_of_encoders[0].include_in_memory
-                    if "question" in include_in_memory:
-                        memory.append(q_enc_new_item)
-                    if "column" in include_in_memory:
-                        memory.append(c_enc_new_item)
-                    if "table" in include_in_memory:
-                        memory.append(t_enc_new_item)
-                    memory = torch.cat(memory, dim=1)
-                    # alignment matrix
-                    align_mat_item = model.aligner(
-                        enc_input, q_enc_new_item, c_enc_new_item, t_enc_new_item, relation
+        final_losses = []
+        bert_grads = None
+        aligner_grads = None
+        decoder_grads = None            
+        for i in range(self.num_particles):
+            plm_output = model.bert_model(enc_input_list)
+            # for single input source domain
+            enc_states = []
+            for idx, (enc_input, plm_out) in enumerate(zip(enc_input_list, plm_output)):
+                relation = model.schema_linking(enc_input)
+                (
+                    q_enc_new_item,
+                    c_enc_new_item,
+                    t_enc_new_item,
+                ) = model.list_of_encoders[i](enc_input, 
+                                                    plm_out,
+                                                    relation)
+                # attention memory 
+                memory = []
+                include_in_memory = model.list_of_encoders[0].include_in_memory
+                if "question" in include_in_memory:
+                    memory.append(q_enc_new_item)
+                if "column" in include_in_memory:
+                    memory.append(c_enc_new_item)
+                if "table" in include_in_memory:
+                    memory.append(t_enc_new_item)
+                memory = torch.cat(memory, dim=1)
+                # alignment matrix
+                align_mat_item = model.aligner(
+                    enc_input, q_enc_new_item, c_enc_new_item, t_enc_new_item, relation
+                )
+                enc_states.append(
+                    SpiderEncoderState(
+                        state=None,
+                        words_for_copying=enc_input["question_for_copying"],
+                        tokenizer=model.list_of_encoders[0].tokenizer,
+                        memory=memory,
+                        question_memory=q_enc_new_item,
+                        schema_memory=torch.cat((c_enc_new_item, t_enc_new_item), dim=1),
+                        pointer_memories={
+                            "column": c_enc_new_item,
+                            "table": t_enc_new_item,
+                        },
+                        pointer_maps={
+                            "column": column_pointer_maps[idx],
+                            "table": table_pointer_maps[idx],
+                        },
+                        m2c_align_mat=align_mat_item[0],
+                        m2t_align_mat=align_mat_item[1],
                     )
-                    enc_states.append(
-                        SpiderEncoderState(
-                            state=None,
-                            words_for_copying=enc_input["question_for_copying"],
-                            tokenizer=model.list_of_encoders[0].tokenizer,
-                            memory=memory,
-                            question_memory=q_enc_new_item,
-                            schema_memory=torch.cat((c_enc_new_item, t_enc_new_item), dim=1),
-                            pointer_memories={
-                                "column": c_enc_new_item,
-                                "table": t_enc_new_item,
-                            },
-                            pointer_maps={
-                                "column": column_pointer_maps[idx],
-                                "table": table_pointer_maps[idx],
-                            },
-                            m2c_align_mat=align_mat_item[0],
-                            m2t_align_mat=align_mat_item[1],
-                        )
-                    )
+                )
 
-                losses = []
-                for enc_state, (enc_input, dec_output) in zip(enc_states, batch):
-                    ret_dic = model.decoder(dec_output, enc_state)
-                    losses.append(ret_dic["loss"])
-                loss = torch.mean(torch.stack(losses, dim=0), dim=0) / num_batch_accumulated
-                final_losses.append(loss.item()*num_batch_accumulated)
-                enc_dec_grads = torch.autograd.grad(loss, 
-                                                    encoder_params[i] + aligner_params + decoder_params,
-                                                    allow_unused=True)
-                particle_grads = enc_dec_grads[:particle_len]
-                aligner_grads = list(enc_dec_grads[particle_len:particle_len + aligner_len])
-                for idx, g in enumerate(aligner_grads):
-                    if g is None:
-                        aligner_grads[idx] = torch.zeros_like(aligner_params[idx])
-                decoder_grads = list(enc_dec_grads[particle_len + aligner_len:])
-                for idx, g in enumerate(decoder_grads):
-                    if g is None:
-                        decoder_grads[idx] = torch.zeros_like(decoder_params[idx])
-                alinger_grads_vec = alinger_grads_vec + (1/self.num_particles)*torch.nn.utils.parameters_to_vector(aligner_grads)
-                decoder_grads_vec = decoder_grads_vec + (1/self.num_particles)*torch.nn.utils.parameters_to_vector(decoder_grads)
-                
-                distance_nll[i, :] = torch.nn.utils.parameters_to_vector(particle_grads)
+            losses = []
+            for enc_state, (enc_input, dec_output) in zip(enc_states, batch):
+                ret_dic = model.decoder(dec_output, enc_state)
+                losses.append(ret_dic["loss"])
+            loss = torch.mean(torch.stack(losses, dim=0), dim=0) / num_batch_accumulated
+            final_losses.append(loss.item()*num_batch_accumulated)
+            grads = torch.autograd.grad(loss, 
+                                                + model.bert_model.parameters()
+                                                + encoder_params[i] 
+                                                + model_aligner_params 
+                                                + model_decoder_params,
+                                                allow_unused=True)
             
-            kernel_matrix, grad_kernel, _ = DeepEnsembleModelAgnostic.get_kernal_wSGLD_B(params=params_matrix,
-                                              num_of_particles=self.num_particles)
+            particle_grads = grads[bert_len:bert_len
+                                   +particle_len]
+            if bert_grads is None:
+                bert_grads = grads[:bert_len]
+                aligner_grads = grads[bert_len
+                                    +particle_len:bert_len
+                                    +particle_len
+                                    +aligner_len]
+                decoder_grads = grads[bert_len
+                                    +particle_len
+                                    +aligner_len:]
+            else:
+                bert_grads += grads[:bert_len]
+                aligner_grads += grads[bert_len
+                                    +particle_len:bert_len
+                                    +particle_len
+                                    +aligner_len]
+                decoder_grads += grads[bert_len
+                                    +particle_len
+                                    +aligner_len:]
+            for idx, g in enumerate(aligner_grads):
+                if g is None:
+                    aligner_grads[idx] = torch.zeros_like(aligner_params[idx])
+            decoder_grads = list(enc_dec_grads[particle_len + aligner_len:])
+            for idx, g in enumerate(decoder_grads):
+                if g is None:
+                    decoder_grads[idx] = torch.zeros_like(decoder_params[idx])
+            alinger_grads_vec = alinger_grads_vec + (1/self.num_particles)*torch.nn.utils.parameters_to_vector(aligner_grads)
+            decoder_grads_vec = decoder_grads_vec + (1/self.num_particles)*torch.nn.utils.parameters_to_vector(decoder_grads)
             
-            # compute inner gradients with rbf kernel
-            # SVGD
-            # encoders_grads = (1/self.num_particles)*(torch.matmul(kernel_matrix, distance_nll) - grad_kernel)
-            # wSGLD_B
-            encoders_grads = distance_nll - grad_kernel
-            # copy inner_grads to main network
-            for i in range(self.num_particles):
-                for p_tar, p_src in zip(model_encoder_params[i],
-                                        DeepEnsembleModelAgnostic.vector_to_list_params(encoders_grads[i],
-                                                                                             model_encoder_params[i])):
-                    p_tar.grad.data.add_(p_src) # todo: divide by num_of_sample if inner is in ba
-            # copy aligner grads to the main network
-            for p_tar, p_src in zip(model_aligner_params,
-                            DeepEnsembleModelAgnostic.vector_to_list_params(alinger_grads_vec, model_aligner_params)):
-                p_tar.grad.data.add_(p_src)
-            # copy decoder grads to the main network
-            for p_tar, p_src in zip(model_decoder_params,
-                            DeepEnsembleModelAgnostic.vector_to_list_params(decoder_grads_vec, model_decoder_params)):
-                p_tar.grad.data.add_(p_src)
-            # trying to free gpu memory 
-            # not sure it would help
-            # del kernel_matrix
-            # del grad_kernel
-            # del distance_nll
-            # del alinger_grads_vec
-            # gc.collect()
-            # torch.cuda.empty_cache()
+            distance_nll[i, :] = torch.nn.utils.parameters_to_vector(particle_grads)
+        
+        kernel_matrix, grad_kernel, _ = DeepEnsembleModelAgnostic.get_kernal_wSGLD_B(params=params_matrix,
+                                            num_of_particles=self.num_particles)
+        
+        # compute inner gradients with rbf kernel
+        # SVGD
+        # encoders_grads = (1/self.num_particles)*(torch.matmul(kernel_matrix, distance_nll) - grad_kernel)
+        # wSGLD_B
+        encoders_grads = distance_nll - grad_kernel
+        # copy inner_grads to main network
+        for i in range(self.num_particles):
+            for p_tar, p_src in zip(model_encoder_params[i],
+                                    DeepEnsembleModelAgnostic.vector_to_list_params(encoders_grads[i],
+                                                                                            model_encoder_params[i])):
+                p_tar.grad.data.add_(p_src) # todo: divide by num_of_sample if inner is in ba
+        # copy bert grads
+        for p_tar, p_src in zip(model.bert_model.parameters(),
+                                          bert_grads):
+            if p_src is None:
+                p_tar.grad.data.add_(1/self.num_particles*p_src)
+            else:
+                p_tar.grad.data.add_(torch.zeros_like(p_tar))
+        # copy aligner grads
+        for p_tar, p_src in zip(model_aligner_params,
+                                aligner_grads):
+            if p_src is None:
+                p_tar.grad.data.add_(1/self.num_particles*p_src)
+            else:
+                p_tar.grad.data.add_(torch.zeros_like(p_tar))
+        # copy decoder grads
+        for p_tar, p_src in zip(model_decoder_params,
+                                decoder_grads):
+            if p_src is None:
+                p_tar.grad.data.add_(1/self.num_particles*p_src)
+            else:
+                p_tar.grad.data.add_(torch.zeros_like(p_tar))
+        # trying to free gpu memory 
+        # not sure it would help
+        # del kernel_matrix
+        # del grad_kernel
+        # del distance_nll
+        # del alinger_grads_vec
+        # gc.collect()
+        # torch.cuda.empty_cache()
             
         ret_dic["loss"] = sum(final_losses)/self.num_particles
         
