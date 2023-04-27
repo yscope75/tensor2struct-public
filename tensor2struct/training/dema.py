@@ -178,16 +178,7 @@ class DeepEnsembleModelAgnostic(nn.Module):
                 decoder_grads += grads[bert_len
                                     +particle_len
                                     +aligner_len:]
-            for idx, g in enumerate(aligner_grads):
-                if g is None:
-                    aligner_grads[idx] = torch.zeros_like(aligner_params[idx])
-            decoder_grads = list(enc_dec_grads[particle_len + aligner_len:])
-            for idx, g in enumerate(decoder_grads):
-                if g is None:
-                    decoder_grads[idx] = torch.zeros_like(decoder_params[idx])
-            alinger_grads_vec = alinger_grads_vec + (1/self.num_particles)*torch.nn.utils.parameters_to_vector(aligner_grads)
-            decoder_grads_vec = decoder_grads_vec + (1/self.num_particles)*torch.nn.utils.parameters_to_vector(decoder_grads)
-            
+
             distance_nll[i, :] = torch.nn.utils.parameters_to_vector(particle_grads)
         
         kernel_matrix, grad_kernel, _ = DeepEnsembleModelAgnostic.get_kernal_wSGLD_B(params=params_matrix,
