@@ -84,7 +84,7 @@ class DEMATrainer(train.Trainer):
         dema_trainer,
     ):
         with self.model_random:
-            non_bert_params = self.model.get_non_bert_parameters()
+            non_bert_params = self.model.parameters()
             for p in non_bert_params:
                 p.grad = torch.zeros_like(p)
             model_encoder_params = []
