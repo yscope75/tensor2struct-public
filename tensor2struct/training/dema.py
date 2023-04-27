@@ -198,21 +198,21 @@ class DeepEnsembleModelAgnostic(nn.Module):
         # copy bert grads
         for p_tar, p_src in zip(model.bert_model.parameters(),
                                           bert_grads):
-            if p_src is None:
+            if p_src is not None:
                 p_tar.grad.data.add_(1/self.num_particles*p_src)
             else:
                 p_tar.grad.data.add_(torch.zeros_like(p_tar))
         # copy aligner grads
         for p_tar, p_src in zip(model_aligner_params,
                                 aligner_grads):
-            if p_src is None:
+            if p_src is not None:
                 p_tar.grad.data.add_(1/self.num_particles*p_src)
             else:
                 p_tar.grad.data.add_(torch.zeros_like(p_tar))
         # copy decoder grads
         for p_tar, p_src in zip(model_decoder_params,
                                 decoder_grads):
-            if p_src is None:
+            if p_src is not None:
                 p_tar.grad.data.add_(1/self.num_particles*p_src)
             else:
                 p_tar.grad.data.add_(torch.zeros_like(p_tar))
