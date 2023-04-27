@@ -152,7 +152,7 @@ class DeepEnsembleModelAgnostic(nn.Module):
             loss = torch.mean(torch.stack(losses, dim=0), dim=0) / num_batch_accumulated
             final_losses.append(loss.item()*num_batch_accumulated)
             grads = torch.autograd.grad(loss, 
-                                                + model.bert_model.parameters()
+                                                + list(model.bert_model.parameters())
                                                 + encoder_params[i] 
                                                 + model_aligner_params 
                                                 + model_decoder_params,
