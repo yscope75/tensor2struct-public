@@ -173,7 +173,7 @@ class DEMATrainer(train.Trainer):
 
                     # load again
                     self.load_model(config)
-                    optimizer, lr_scheduler = self.load_optimizer(config)
+                    optimizer, lr_scheduler, dema_trainer = self.load_optimizer(config)
                     saver, _ = self.load_saver(config, modeldir, optimizer=optimizer)
                     ## remove the tmp checkpoint
                     os.unlink(os.path.join(modeldir, f"model_checkpoint-{tmp_step}"))
