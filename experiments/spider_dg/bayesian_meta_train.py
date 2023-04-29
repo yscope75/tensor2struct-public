@@ -149,9 +149,9 @@ class BayesianMetaTrainer(bayesian_meta_train.BMetaTrainer):
         # Report metrics and lr
         if last_step % self.train_config.report_every_n == 0:
             self.logger.info("Step {}: loss={:.4f}".format(last_step, loss))
-            self.logger.info(f"Step {last_step}, lr={self.train_config.inner_opt.lr, outer_lr}")
+            self.logger.info(f"Step {last_step}, lr={self.train_config.inner_opt['lr'], outer_lr}")
             wandb.log({"train_loss": loss}, step=last_step)
-            wandb.log({f"inner_lr": self.train_config.inner_opt.lr}, step=last_step)
+            wandb.log({f"inner_lr": self.train_config.inner_opt["lr"]}, step=last_step)
             for idx, lr in enumerate(outer_lr):
                 wandb.log({f"outer_lr_{idx}": lr}, step=last_step)
 
