@@ -231,11 +231,9 @@ class BayesModelAgnosticMetaLearning(nn.Module):
                                                         + list(inner_aligner.parameters())
                                                         + list(inner_decoder.parameters()))
 
-        inner_encoder_params = []
-        for i in range(self.num_particles):
-            inner_encoder_params.append(list(inner_encoders[i].parameters()))
+
         inner_params_matrix = torch.stack(
-            [torch.nn.utils.parameters_to_vector(params) for params in inner_encoder_params],
+            [torch.nn.utils.parameters_to_vector(list(inner_encoders[i].parameters())) for i in range(self.num_particles)],
             dim=0
         )
         ret_dic = {}
