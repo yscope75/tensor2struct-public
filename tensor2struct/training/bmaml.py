@@ -227,10 +227,10 @@ class BayesModelAgnosticMetaLearning(nn.Module):
         #                     BayesModelAgnosticMetaLearning.vector_to_list_params(decoder_grads_vec, model_decoder_params)):
         #         p_tar.grad.data.add_(p_src)
         inner_optimizer = registry.construct(
-                "optimizer", inner_opt_config, params=list(inner_encoders.parameters()
-                                                                      + list(inner_aligner.parameters())
-                                                                      + list(inner_decoder.parameters()))
-            )
+                "optimizer", inner_opt_config, params=list(inner_encoders.parameters())
+                                                        + list(inner_aligner.parameters())
+                                                        + list(inner_decoder.parameters()))
+
         inner_encoder_params = []
         for i in range(self.num_particles):
             inner_encoder_params.append(list(inner_encoders[i].parameters()))
