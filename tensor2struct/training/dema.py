@@ -4,6 +4,7 @@ import torch
 import torch.nn as nn
 import numpy as np
 import torch.autograd as autograd 
+import operator
 import collections
 import gc 
 import copy
@@ -170,14 +171,19 @@ class DeepEnsembleModelAgnostic(nn.Module):
                                     +particle_len
                                     +aligner_len:]
             else:
-                bert_grads += grads[:bert_len]
-                aligner_grads += grads[bert_len
-                                    +particle_len:bert_len
-                                    +particle_len
-                                    +aligner_len]
-                decoder_grads += grads[bert_len
-                                    +particle_len
-                                    +aligner_len:]
+                bert_grads = tuple(x+y if y is not None else None 
+                                 for x,y in zip(bert_grads, grads[:bert_len])) 
+                aligner_grads = tuple(x+y if y is not None else None 
+                                 for x,y in zip(aligner_grads,
+                                                grads[bert_len
+                                                      +particle_len:bert_len
+                                                      +particle_len
+                                                      +aligner_len]))
+                decoder_grads = tuple(x+y if y is not None else None 
+                                 for x,y in zip(decoder_grads, 
+                                                grads[bert_len
+                                                      +particle_len
+                                                      +aligner_len:])) 
 
             distance_nll[i, :] = torch.nn.utils.parameters_to_vector(particle_grads)
         
