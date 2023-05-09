@@ -88,9 +88,10 @@ class DEMATrainer(train.Trainer):
         dema_trainer,
     ):
         with self.model_random:
-            non_bert_params = self.model.parameters()
-            for p in non_bert_params:
-                p.grad = torch.zeros_like(p)
+
+            for p in self.model.parameters():
+                if p.grad is None:
+                    p.grad = torch.zeros_like(p)
             model_encoder_params = []
             for i in range(self.train_config.num_particles):
                 model_encoder_params.append(list(self.model.list_of_encoders[i].parameters()))
@@ -117,8 +118,8 @@ class DEMATrainer(train.Trainer):
                     )
                     
             optimizer.step()
+            optimizer.zero_grad()
             new_lr = lr_scheduler.update_lr(last_step)
-            # optimizer.zero_grad()
 
             if new_lr is None:
                 new_lr = [param["lr"] for param in optimizer.param_groups]
