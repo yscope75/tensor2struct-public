@@ -515,10 +515,10 @@ class BayesModelAgnosticMetaLearning(nn.Module):
         final_loss = sum(inner_loss)/self.num_particles + sum(loss_over_pars)
         ret_dic["loss"] = final_loss
         # del inner_encoders
-        # del inner_aligner
+        del inner_aligner
         # del inner_decoder
-        # import gc
-        # gc.collect()
+        import gc
+        gc.collect()
         # torch.cuda.empty_cache()
         
         return ret_dic
