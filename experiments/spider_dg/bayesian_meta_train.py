@@ -114,7 +114,8 @@ class BayesianMetaTrainer(bayesian_meta_train.BMetaTrainer):
         with self.model_random:
             
             for p in self.model.parameters():
-                p.grad = torch.zeros_like(p)
+                if p.grad is None:
+                    p.grad = torch.zeros_like(p)
             
             for _i in range(self.train_config.num_batch_accumulated):
                 task = train_data_scheduler.get_batch(last_step)
