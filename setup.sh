@@ -20,6 +20,6 @@ export CACHE_DIR=${PT_DATA_DIR}
 mkdir -p "$CACHE_DIR/.vector_cache"
 
 # download phow2v 300 then unzip 
-wget https://public.vinai.io/word2vec_vi_words_300dims.zip -P "$CACHE_DIR/.vector_cache"
-unzip "$CACHE_DIR/.vector_cache/word2vec_vi_words_300dims.zip" -d "$CACHE_DIR/.vector_cache"
-rm "$CACHE_DIR/.vector_cache/word2vec_vi_words_300dims.zip"
+# wget https://public.vinai.io/word2vec_vi_words_300dims.zip -P "$CACHE_DIR/.vector_cache"
+# unzip "$CACHE_DIR/.vector_cache/word2vec_vi_words_300dims.zip" -d "$CACHE_DIR/.vector_cache"
+# rm "$CACHE_DIR/.vector_cache/word2vec_vi_words_300dims.zip"
