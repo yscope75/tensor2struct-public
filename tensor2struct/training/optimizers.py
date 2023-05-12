@@ -203,3 +203,25 @@ class BertWarmupPolynomialLRSchedulerGroupV2(WarmupPolynomialLRScheduler):
             param_group["lr"] = new_lr
             new_lrs.append(new_lr)
         return new_lrs
+
+@registry.register("optimizer", "sgdn")
+class SGDNesterov(torch.optim.SGD):
+    """
+    According to https://arxiv.org/pdf/2006.05987.pdf, AdamW seems to be more stable 
+    for fine-tuning compared with BertAdamW
+    """
+
+    def __init__(self, non_bert_params, bert_params, lr=1e-3, bert_lr=2e-5, **kwargs):
+        self.bert_param_group = {
+            "params": bert_params,
+            "lr": bert_lr,
+            "weight_decay": 0,
+        }
+        self.non_bert_param_group = {"params": non_bert_params}
+
+        params = [self.non_bert_param_group, self.bert_param_group]
+
+        if "name" in kwargs:
+            kwargs = kwargs.copy()
+            del kwargs["name"]
+        super(SGDNesterov, self).__init__(params, lr=lr, **kwargs)
