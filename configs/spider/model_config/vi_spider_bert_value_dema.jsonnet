@@ -83,7 +83,7 @@ function(args, data_path=_data_path) spider_base(args, data_path=_data_path) {
     optimizer: {
         name: $.args.opt,
         nesterov: $.args.nesterov,
-        momentum: $.agrs.momentum,
+        momentum: $.args.momentum,
         lr: $.args.lr,
         bert_lr: 0.0,
     },
