@@ -78,7 +78,7 @@ class DeepEnsembleModelAgnostic(nn.Module):
             [torch.nn.utils.parameters_to_vector(params) for params in encoder_params],
             dim=0
         )
-        bert_len = len(list(model.bert_model.parameters()))
+        # bert_len = len(list(model.bert_model.parameters()))
         particle_len = len(model_encoder_params[0])
         aligner_len = len(model_aligner_params)
         ret_dic = {}
