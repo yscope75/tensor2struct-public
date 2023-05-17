@@ -98,10 +98,10 @@ class DeepEnsembleModelAgnostic(nn.Module):
         # bert_grads = None
         aligner_grads = None
         decoder_grads = None            
-        # with torch.no_grad():
-        #     plm_output = model.bert_model(enc_input_list)
-        for i in range(self.num_particles):
+        with torch.no_grad():
             plm_output = model.bert_model(enc_input_list)
+        for i in range(self.num_particles):
+            # plm_output = model.bert_model(enc_input_list)
             # for single input source domain
             enc_states = []
             for idx, (enc_input, plm_out) in enumerate(zip(enc_input_list, plm_output)):
@@ -155,35 +155,31 @@ class DeepEnsembleModelAgnostic(nn.Module):
             loss = torch.mean(torch.stack(losses, dim=0), dim=0) / num_batch_accumulated
             final_losses.append(loss.item()*num_batch_accumulated)
             grads = torch.autograd.grad(loss, 
-                                        list(model.bert_model.parameters())
-                                        + encoder_params[i] 
+                                        # list(model.bert_model.parameters())
+                                        encoder_params[i] 
                                         + model_aligner_params 
                                         + model_decoder_params,
                                         allow_unused=True)
             
-            particle_grads = grads[bert_len:bert_len+particle_len]
+            particle_grads = grads[:particle_len]
             if aligner_grads is None:
-                bert_grads = grads[:bert_len]
-                aligner_grads = grads[bert_len
-                                      +particle_len:bert_len
-                                      +particle_len
+                # bert_grads = grads[:bert_len]
+                aligner_grads = grads[particle_len:
+                                      particle_len
                                       +aligner_len]
-                decoder_grads = grads[bert_len
-                                      +particle_len
+                decoder_grads = grads[particle_len
                                       +aligner_len:]
             else:
-                bert_grads = tuple(x+y if y is not None else None 
-                                 for x,y in zip(bert_grads, grads[:bert_len])) 
+                # bert_grads = tuple(x+y if y is not None else None 
+                #                  for x,y in zip(bert_grads, grads[:bert_len])) 
                 aligner_grads = tuple(x+y if y is not None else None 
                                  for x,y in zip(aligner_grads,
-                                                grads[bert_len
-                                                +particle_len:bert_len
-                                                +particle_len
+                                                grads[particle_len:
+                                                particle_len
                                                 +aligner_len]))
                 decoder_grads = tuple(x+y if y is not None else None 
                                  for x,y in zip(decoder_grads, 
-                                                grads[bert_len
-                                                +particle_len
+                                                grads[particle_len
                                                 +aligner_len:])) 
 
             distance_nll[i, :] = torch.nn.utils.parameters_to_vector(particle_grads)
@@ -203,12 +199,12 @@ class DeepEnsembleModelAgnostic(nn.Module):
                                                                                             model_encoder_params[i])):
                 p_tar.grad.data.add_(p_src) # todo: divide by num_of_sample if inner is in ba
         # # copy bert grads
-        for p_tar, p_src in zip(model.bert_model.parameters(),
-                                          bert_grads):
-            if p_src is not None:
-                p_tar.grad.data.add_(1/self.num_particles*p_src)
-            else:
-                p_tar.grad.data.add_(torch.zeros_like(p_tar))
+        # for p_tar, p_src in zip(model.bert_model.parameters(),
+        #                                   bert_grads):
+        #     if p_src is not None:
+        #         p_tar.grad.data.add_(1/self.num_particles*p_src)
+        #     else:
+        #         p_tar.grad.data.add_(torch.zeros_like(p_tar))
         # copy aligner grads
         for p_tar, p_src in zip(model_aligner_params,
                                 aligner_grads):
