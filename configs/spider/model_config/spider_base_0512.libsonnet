@@ -206,6 +206,10 @@ function(args={}, data_path=_data_path) {
 
     bayesian_meta_train: $.meta_train + {
         num_particles: $.args.num_particles,
+        inner_opt: {
+            name: $.args.meta_opt,
+            lr: $.args.meta_lr,
+        },
     },
 
     meta_test: $.meta_train + {
