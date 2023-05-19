@@ -340,12 +340,12 @@ class BayesModelAgnosticMetaLearning(nn.Module):
                                               num_of_particles=self.num_particles)
             
             # compute inner gradients with rbf kernel
-            encoder_inner_grads = distance_nll - grad_kernel
+            distance_nll = distance_nll - grad_kernel
 
             # copy inner_grads to main network
             for i in range(self.num_particles):
                 for p_tar, p_src in zip(model_encoder_params[i],
-                                        BayesModelAgnosticMetaLearning.vector_to_list_params(encoder_inner_grads[i],
+                                        BayesModelAgnosticMetaLearning.vector_to_list_params(distance_nll[i],
                                                                                              model_encoder_params[i])):
                     p_tar.grad.data.add_(p_src) # todo: divide by num_of_sample if inner is in ba
             # copy aligner grads to the main network
@@ -515,10 +515,10 @@ class BayesModelAgnosticMetaLearning(nn.Module):
         final_loss = sum(inner_loss)/self.num_particles + sum(loss_over_pars)
         ret_dic["loss"] = final_loss
         # del inner_encoders
-        del inner_aligner
+        # del inner_aligner
         # del inner_decoder
-        import gc
-        gc.collect()
+        # import gc
+        # gc.collect()
         # torch.cuda.empty_cache()
         
         return ret_dic
