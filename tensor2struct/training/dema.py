@@ -184,14 +184,14 @@ class DeepEnsembleModelAgnostic(nn.Module):
 
             distance_nll[i, :] = torch.nn.utils.parameters_to_vector(particle_grads)
         
-        kernel_matrix, grad_kernel, _ = DeepEnsembleModelAgnostic.get_kernal_wSGLD_B(params=params_matrix,
+        kernel_matrix, grad_kernel, _ = DeepEnsembleModelAgnostic.get_kernel(params=params_matrix,
                                             num_of_particles=self.num_particles)
         
         # compute inner gradients with rbf kernel
         # SVGD
-        # encoders_grads = (1/self.num_particles)*(torch.matmul(kernel_matrix, distance_nll) - grad_kernel)
+        encoders_grads = (1/self.num_particles)*(torch.matmul(kernel_matrix, distance_nll) - grad_kernel)
         # wSGLD_B
-        encoders_grads = distance_nll - grad_kernel
+        # encoders_grads = distance_nll - grad_kernel
         # copy inner_grads to main network
         for i in range(self.num_particles):
             for p_tar, p_src in zip(model_encoder_params[i],
@@ -209,14 +209,14 @@ class DeepEnsembleModelAgnostic(nn.Module):
         for p_tar, p_src in zip(model_aligner_params,
                                 aligner_grads):
             if p_src is not None:
-                p_tar.grad.data.add_(1/self.num_particles*p_src)
+                p_tar.grad.data.add_(1/(self.num_particles*self.num_particles)*p_src)
             else:
                 p_tar.grad.data.add_(torch.zeros_like(p_tar))
         # copy decoder grads
         for p_tar, p_src in zip(model_decoder_params,
                                 decoder_grads):
             if p_src is not None:
-                p_tar.grad.data.add_(1/self.num_particles*p_src)
+                p_tar.grad.data.add_(1/(self.num_particles*self.num_particles)*p_src)
             else:
                 p_tar.grad.data.add_(torch.zeros_like(p_tar))
         # trying to free gpu memory 
