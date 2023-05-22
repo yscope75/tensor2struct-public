@@ -517,8 +517,8 @@ class BayesModelAgnosticMetaLearning(nn.Module):
         # del inner_encoders
         # del inner_grads
         # del inner_decoder
-        import gc
-        gc.collect()
+        # import gc
+        # gc.collect()
         # torch.cuda.empty_cache()
         
         return ret_dic
