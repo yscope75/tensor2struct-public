@@ -90,7 +90,8 @@ class DEMATrainer(train.Trainer):
         with self.model_random:
 
             for p in self.model.parameters():
-                p.grad = torch.zeros_like(p)
+                if p.grad is None:
+                    p.grad = torch.zeros_like(p)
             model_encoder_params = []
             for i in range(self.train_config.num_particles):
                 model_encoder_params.append(list(self.model.list_of_encoders[i].parameters()))

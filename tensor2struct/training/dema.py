@@ -91,7 +91,10 @@ class DeepEnsembleModelAgnostic(nn.Module):
             {i: [i] for i in range(len(desc["tables"]))} for desc in enc_input_list
         ]
 
-        final_losses = []      
+        final_losses = []
+        # bert_grads = None
+        aligner_grads = None
+        decoder_grads = None            
         with torch.no_grad():
             plm_output = model.bert_model(enc_input_list)
         for i in range(self.num_particles):
@@ -148,23 +151,33 @@ class DeepEnsembleModelAgnostic(nn.Module):
                 losses.append(ret_dic["loss"])
             loss = torch.mean(torch.stack(losses, dim=0), dim=0) / num_batch_accumulated
             final_losses.append(loss.item()*num_batch_accumulated)
-            train_params = model_encoder_params[i] + model_aligner_params + model_decoder_params
             grads = torch.autograd.grad(loss, 
                                         # list(model.bert_model.parameters())
-                                        train_params,
+                                        model_encoder_params[i] 
+                                        + model_aligner_params 
+                                        + model_decoder_params,
                                         allow_unused=True)
-            grads = list(grads)
-            for idx, g in enumerate(grads):
-                if g is None:
-                    grads[idx] = torch.zeros_like(train_params[idx])
+            
             particle_grads = grads[:particle_len]
-
-            # bert_grads = grads[:bert_len]
-            aligner_grads = grads[particle_len:
-                                    particle_len
-                                    +aligner_len]
-            decoder_grads = grads[particle_len
-                                    +aligner_len:]
+            if aligner_grads is None:
+                # bert_grads = grads[:bert_len]
+                aligner_grads = grads[particle_len:
+                                      particle_len
+                                      +aligner_len]
+                decoder_grads = grads[particle_len
+                                      +aligner_len:]
+            else:
+                # bert_grads = tuple(x+y if y is not None else None 
+                #                  for x,y in zip(bert_grads, grads[:bert_len])) 
+                aligner_grads = tuple(x+y if y is not None else None 
+                                 for x,y in zip(aligner_grads,
+                                                grads[particle_len:
+                                                particle_len
+                                                +aligner_len]))
+                decoder_grads = tuple(x+y if y is not None else None 
+                                 for x,y in zip(decoder_grads, 
+                                                grads[particle_len
+                                                +aligner_len:])) 
 
             distance_nll[i, :] = torch.nn.utils.parameters_to_vector(particle_grads)
         
@@ -192,12 +205,17 @@ class DeepEnsembleModelAgnostic(nn.Module):
         # copy aligner grads
         for p_tar, p_src in zip(model_aligner_params,
                                 aligner_grads):
-            p_tar.grad.data.add_((1/self.num_particles)*p_src)
-
+            if p_src is not None:
+                p_tar.grad.data.add_(1/self.num_particles*p_src)
+            else:
+                p_tar.grad.data.add_(torch.zeros_like(p_tar))
         # copy decoder grads
         for p_tar, p_src in zip(model_decoder_params,
                                 decoder_grads):
-            p_tar.grad.data.add_((1/self.num_particles)*p_src)
+            if p_src is not None:
+                p_tar.grad.data.add_(1/self.num_particles*p_src)
+            else:
+                p_tar.grad.data.add_(torch.zeros_like(p_tar))
         # trying to free gpu memory 
         # not sure it would help
         # del kernel_matrix
