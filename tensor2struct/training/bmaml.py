@@ -232,7 +232,7 @@ class BayesModelAgnosticMetaLearning(nn.Module):
 
         for p in complete_inner_params:
             if p.grad is None:
-                p.grad.data = torch.zeros_like(p)
+                p.grad = torch.zeros_like(p)
                 
         inner_params_matrix = torch.stack(
             [torch.nn.utils.parameters_to_vector(list(inner_encoders[i].parameters())) for i in range(self.num_particles)],
