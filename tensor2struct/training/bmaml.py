@@ -360,8 +360,8 @@ class BayesModelAgnosticMetaLearning(nn.Module):
                     p_tar1.grad.data.add_(1/self.num_particles*p_src)
                     p_tar2.grad.data.add_(1/self.num_particles*p_src)
                 else:
-                    p_tar1.grad.data.add_(torch.zeros_like(p_tar))
-                    p_tar2.grad.data.add_(torch.zeros_like(p_tar))
+                    p_tar1.grad.data.add_(torch.zeros_like(p_tar1))
+                    p_tar2.grad.data.add_(torch.zeros_like(p_tar2))
             # copy decoder grads to the main network
             for p_tar1, p_tar2, p_src in zip(model_decoder_params,
                                     inner_decoder.parameters(),
@@ -370,8 +370,8 @@ class BayesModelAgnosticMetaLearning(nn.Module):
                     p_tar1.grad.data.add_(1/self.num_particles*p_src)
                     p_tar2.grad.data.add_(1/self.num_particles*p_src)
                 else:
-                    p_tar1.grad.data.add_(torch.zeros_like(p_tar))
-                    p_tar2.grad.data.add_(torch.zeros_like(p_tar))
+                    p_tar1.grad.data.add_(torch.zeros_like(p_tar1))
+                    p_tar2.grad.data.add_(torch.zeros_like(p_tar2))
             
             inner_optimizer.step()
         
