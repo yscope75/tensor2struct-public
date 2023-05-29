@@ -226,12 +226,14 @@ class BayesModelAgnosticMetaLearning(nn.Module):
         #     for p_tar, p_src in zip(model_decoder_params,
         #                     BayesModelAgnosticMetaLearning.vector_to_list_params(decoder_grads_vec, model_decoder_params)):
         #         p_tar.grad.data.add_(p_src)
+        complete_inner_params = list(inner_encoders.parameters()) + list(inner_aligner.parameters()) + list(inner_decoder.parameters())
         inner_optimizer = registry.construct(
-                "optimizer", inner_opt_config, params=list(inner_encoders.parameters())
-                                                        + list(inner_aligner.parameters())
-                                                        + list(inner_decoder.parameters()))
+                "optimizer", inner_opt_config, params=)
 
-        inner_optimizer.zero_grad()
+        for p in complete_inner_params:
+            if p.grad is None:
+                p.grad.data = torch.zeros_like(p)
+                
         inner_params_matrix = torch.stack(
             [torch.nn.utils.parameters_to_vector(list(inner_encoders[i].parameters())) for i in range(self.num_particles)],
             dim=0
@@ -345,14 +347,14 @@ class BayesModelAgnosticMetaLearning(nn.Module):
             # copy inner_grads to main network
             for i in range(self.num_particles):
                 for p_tar1, p_tar2, p_src in zip(model_encoder_params[i],
-                                                 inner_encoders[i],
+                                                 inner_encoders[i].parameters(),
                                         BayesModelAgnosticMetaLearning.vector_to_list_params(inner_grads[i],
                                                                                              model_encoder_params[i])):
                     p_tar1.grad.data.add_(p_src) # todo: divide by num_of_sample if inner is in ba
                     p_tar2.grad.data.add_(p_src)
             # copy aligner grads to the main network
             for p_tar1, p_tar2, p_src in zip(model_aligner_params, 
-                                             inner_aligner,
+                                             inner_aligner.parameters(),
                             aligner_grads):
                 if p_src is not None:
                     p_tar1.grad.data.add_(1/self.num_particles*p_src)
@@ -362,7 +364,7 @@ class BayesModelAgnosticMetaLearning(nn.Module):
                     p_tar2.grad.data.add_(torch.zeros_like(p_tar))
             # copy decoder grads to the main network
             for p_tar1, p_tar2, p_src in zip(model_decoder_params,
-                                    inner_decoder,
+                                    inner_decoder.parameters(),
                             decoder_grads):
                 if p_src is not None:
                     p_tar1.grad.data.add_(1/self.num_particles*p_src)
