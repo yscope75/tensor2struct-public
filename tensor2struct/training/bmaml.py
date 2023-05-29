@@ -228,7 +228,7 @@ class BayesModelAgnosticMetaLearning(nn.Module):
         #         p_tar.grad.data.add_(p_src)
         complete_inner_params = list(inner_encoders.parameters()) + list(inner_aligner.parameters()) + list(inner_decoder.parameters())
         inner_optimizer = registry.construct(
-                "optimizer", inner_opt_config, params=)
+                "optimizer", inner_opt_config, params=complete_inner_params)
 
         for p in complete_inner_params:
             if p.grad is None:
