@@ -344,24 +344,32 @@ class BayesModelAgnosticMetaLearning(nn.Module):
 
             # copy inner_grads to main network
             for i in range(self.num_particles):
-                for p_tar, p_src in zip(model_encoder_params[i],
+                for p_tar1, p_tar2, p_src in zip(model_encoder_params[i],
+                                                 inner_encoders[i],
                                         BayesModelAgnosticMetaLearning.vector_to_list_params(inner_grads[i],
                                                                                              model_encoder_params[i])):
-                    p_tar.grad.data.add_(p_src) # todo: divide by num_of_sample if inner is in ba
+                    p_tar1.grad.data.add_(p_src) # todo: divide by num_of_sample if inner is in ba
+                    p_tar2.grad.data.add_(p_src)
             # copy aligner grads to the main network
-            for p_tar, p_src in zip(model_aligner_params,
+            for p_tar1, p_tar2, p_src in zip(model_aligner_params, 
+                                             inner_aligner,
                             aligner_grads):
                 if p_src is not None:
-                    p_tar.grad.data.add_(1/self.num_particles*p_src)
+                    p_tar1.grad.data.add_(1/self.num_particles*p_src)
+                    p_tar2.grad.data.add_(1/self.num_particles*p_src)
                 else:
-                    p_tar.grad.data.add_(torch.zeros_like(p_tar))
+                    p_tar1.grad.data.add_(torch.zeros_like(p_tar))
+                    p_tar2.grad.data.add_(torch.zeros_like(p_tar))
             # copy decoder grads to the main network
-            for p_tar, p_src in zip(model_decoder_params,
+            for p_tar1, p_tar2, p_src in zip(model_decoder_params,
+                                    inner_decoder,
                             decoder_grads):
                 if p_src is not None:
-                    p_tar.grad.data.add_(1/self.num_particles*p_src)
+                    p_tar1.grad.data.add_(1/self.num_particles*p_src)
+                    p_tar2.grad.data.add_(1/self.num_particles*p_src)
                 else:
-                    p_tar.grad.data.add_(torch.zeros_like(p_tar))
+                    p_tar1.grad.data.add_(torch.zeros_like(p_tar))
+                    p_tar2.grad.data.add_(torch.zeros_like(p_tar))
             
             inner_optimizer.step()
         
