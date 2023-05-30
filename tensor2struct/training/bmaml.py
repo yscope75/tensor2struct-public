@@ -226,13 +226,14 @@ class BayesModelAgnosticMetaLearning(nn.Module):
         #     for p_tar, p_src in zip(model_decoder_params,
         #                     BayesModelAgnosticMetaLearning.vector_to_list_params(decoder_grads_vec, model_decoder_params)):
         #         p_tar.grad.data.add_(p_src)
-
+        inner_aligner_params = list(inner_aligner.parameters())
+        inner_decoder_params = list(inner_decoder.parameters())
         inner_optimizer = registry.construct(
                 "optimizer", inner_opt_config, params=list(inner_encoders.parameters()) 
-                + list(inner_aligner.parameters()) 
-                + list(inner_decoder.parameters()))
+                + inner_aligner_params
+                + inner_decoder_params)
 
-        for p in list(inner_encoders.parameters()) + list(inner_aligner.parameters()) + list(inner_decoder.parameters()):
+        for p in list(inner_encoders.parameters()) + inner_aligner_params + inner_decoder_params:
             if p.grad is None:
                 p.grad = torch.zeros_like(p)
                 
@@ -317,8 +318,8 @@ class BayesModelAgnosticMetaLearning(nn.Module):
                 inner_loss.append(loss.item())
                 inner_grads = torch.autograd.grad(loss, 
                                                     list(inner_encoders[i].parameters()) 
-                                                    + list(inner_aligner.parameters()) 
-                                                    + list(inner_decoder.parameters()),
+                                                    + inner_aligner_params 
+                                                    + inner_decoder_params,
                                                     allow_unused=True)
                 particle_grads = inner_grads[:particle_len]
                 if aligner_grads is None:
@@ -356,7 +357,7 @@ class BayesModelAgnosticMetaLearning(nn.Module):
                     p_tar2.grad.data.add_(p_src)
             # copy aligner grads to the main network
             for p_tar1, p_tar2, p_src in zip(model_aligner_params, 
-                                             inner_aligner.parameters(),
+                                             inner_aligner_params,
                             aligner_grads):
                 if p_src is not None:
                     p_tar1.grad.data.add_(1/self.num_particles*p_src)
@@ -366,7 +367,7 @@ class BayesModelAgnosticMetaLearning(nn.Module):
                     p_tar2.grad.data.add_(torch.zeros_like(p_tar2))
             # copy decoder grads to the main network
             for p_tar1, p_tar2, p_src in zip(model_decoder_params,
-                                    inner_decoder.parameters(),
+                                    inner_decoder_params,
                             decoder_grads):
                 if p_src is not None:
                     p_tar1.grad.data.add_(1/self.num_particles*p_src)
@@ -381,7 +382,7 @@ class BayesModelAgnosticMetaLearning(nn.Module):
         # accumulate to compute mean over particles
         loss_over_pars = []
         bert_grad_outer = None
-        outer_aligner_grads = None 
+        aligner_grads = None 
         decoder_grads = None
         for i in range(self.num_particles):
             mean_outer_loss = torch.Tensor([0.0]).to(self.device)
@@ -462,7 +463,7 @@ class BayesModelAgnosticMetaLearning(nn.Module):
                     p_tar.grad.data.add_(torch.zeros_like(model_encoder_params[i][idx]))
             if bert_grad_outer is None:
                 bert_grad_outer = outer_grads[:bert_len]
-                outer_aligner_grads = outer_grads[bert_len
+                aligner_grads = outer_grads[bert_len
                                         +particle_len:bert_len
                                         +particle_len
                                         +aligner_len]
@@ -472,8 +473,8 @@ class BayesModelAgnosticMetaLearning(nn.Module):
             else: 
                 bert_grad_outer = tuple(x+y if y is not None else None 
                     for x,y in zip(bert_grad_outer, outer_grads[:bert_len]))
-                outer_aligner_grads = tuple(x+y if y is not None else None 
-                    for x,y in zip(outer_aligner_grads, 
+                aligner_grads = tuple(x+y if y is not None else None 
+                    for x,y in zip(aligner_grads, 
                                    outer_grads[bert_len
                                     +particle_len
                                     :bert_len
@@ -496,7 +497,7 @@ class BayesModelAgnosticMetaLearning(nn.Module):
             
         # copy aligner grads to the main network
         for idx, (p_tar, p_src) in enumerate(zip(model_aligner_params,
-                                outer_aligner_grads)):
+                                aligner_grads)):
             if p_src is not None:
                 p_tar.grad.data.add_(p_src)
             else:
@@ -527,10 +528,10 @@ class BayesModelAgnosticMetaLearning(nn.Module):
         final_loss = sum(inner_loss)/self.num_particles + sum(loss_over_pars)
         ret_dic["loss"] = final_loss
         # del inner_encoders
-        del outer_aligner_grads
+        # del inner_aligner
         # del inner_decoder
-        import gc
-        gc.collect()
+        # import gc
+        # gc.collect()
         # torch.cuda.empty_cache()
         
         return ret_dic
