@@ -528,7 +528,7 @@ class BayesModelAgnosticMetaLearning(nn.Module):
         final_loss = sum(inner_loss)/self.num_particles + sum(loss_over_pars)
         ret_dic["loss"] = final_loss
         # del inner_encoders
-        # del inner_aligner
+        del inner_aligner
         # del inner_decoder
         import gc
         gc.collect()
@@ -584,7 +584,7 @@ class BayesModelAgnosticMetaLearning(nn.Module):
         grad_kernel += -(torch.matmul(kernel_matrix*torch.transpose(invert_kernel_sum,0,1), params) +
                          torch.matmul(kernel_matrix, params)*invert_kernel_sum)
         grad_kernel /= h
-        del kernel_matrix
+        
         return grad_kernel, h
     
     @staticmethod
