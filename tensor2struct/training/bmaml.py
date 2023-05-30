@@ -381,7 +381,7 @@ class BayesModelAgnosticMetaLearning(nn.Module):
         # accumulate to compute mean over particles
         loss_over_pars = []
         bert_grad_outer = None
-        aligner_grads = None 
+        outer_aligner_grads = None 
         decoder_grads = None
         for i in range(self.num_particles):
             mean_outer_loss = torch.Tensor([0.0]).to(self.device)
@@ -462,7 +462,7 @@ class BayesModelAgnosticMetaLearning(nn.Module):
                     p_tar.grad.data.add_(torch.zeros_like(model_encoder_params[i][idx]))
             if bert_grad_outer is None:
                 bert_grad_outer = outer_grads[:bert_len]
-                aligner_grads = outer_grads[bert_len
+                outer_aligner_grads = outer_grads[bert_len
                                         +particle_len:bert_len
                                         +particle_len
                                         +aligner_len]
@@ -472,8 +472,8 @@ class BayesModelAgnosticMetaLearning(nn.Module):
             else: 
                 bert_grad_outer = tuple(x+y if y is not None else None 
                     for x,y in zip(bert_grad_outer, outer_grads[:bert_len]))
-                aligner_grads = tuple(x+y if y is not None else None 
-                    for x,y in zip(aligner_grads, 
+                outer_aligner_grads = tuple(x+y if y is not None else None 
+                    for x,y in zip(outer_aligner_grads, 
                                    outer_grads[bert_len
                                     +particle_len
                                     :bert_len
@@ -496,7 +496,7 @@ class BayesModelAgnosticMetaLearning(nn.Module):
             
         # copy aligner grads to the main network
         for idx, (p_tar, p_src) in enumerate(zip(model_aligner_params,
-                                aligner_grads)):
+                                outer_aligner_grads)):
             if p_src is not None:
                 p_tar.grad.data.add_(p_src)
             else:
@@ -527,11 +527,11 @@ class BayesModelAgnosticMetaLearning(nn.Module):
         final_loss = sum(inner_loss)/self.num_particles + sum(loss_over_pars)
         ret_dic["loss"] = final_loss
         # del inner_encoders
-        del inner_aligner
+        del outer_aligner_grads
         # del inner_decoder
-        # import gc
-        # gc.collect()
-        torch.cuda.empty_cache()
+        import gc
+        gc.collect()
+        # torch.cuda.empty_cache()
         
         return ret_dic
     
