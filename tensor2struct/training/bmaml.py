@@ -525,7 +525,7 @@ class BayesModelAgnosticMetaLearning(nn.Module):
         final_loss = sum(inner_loss)/self.num_particles + sum(loss_over_pars)
         ret_dic["loss"] = final_loss
         # del inner_encoders
-        del inner_grads
+        del aligner_grads
         # del inner_decoder
         import gc
         gc.collect()
