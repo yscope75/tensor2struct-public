@@ -226,11 +226,13 @@ class BayesModelAgnosticMetaLearning(nn.Module):
         #     for p_tar, p_src in zip(model_decoder_params,
         #                     BayesModelAgnosticMetaLearning.vector_to_list_params(decoder_grads_vec, model_decoder_params)):
         #         p_tar.grad.data.add_(p_src)
-        complete_inner_params = list(inner_encoders.parameters()) + list(inner_aligner.parameters()) + list(inner_decoder.parameters())
-        inner_optimizer = registry.construct(
-                "optimizer", inner_opt_config, params=complete_inner_params)
 
-        for p in complete_inner_params:
+        inner_optimizer = registry.construct(
+                "optimizer", inner_opt_config, params=list(inner_encoders.parameters()) 
+                + list(inner_aligner.parameters()) 
+                + list(inner_decoder.parameters()))
+
+        for p in list(inner_encoders.parameters()) + list(inner_aligner.parameters()) + list(inner_decoder.parameters()):
             if p.grad is None:
                 p.grad = torch.zeros_like(p)
                 
@@ -525,10 +527,10 @@ class BayesModelAgnosticMetaLearning(nn.Module):
         final_loss = sum(inner_loss)/self.num_particles + sum(loss_over_pars)
         ret_dic["loss"] = final_loss
         # del inner_encoders
-        del aligner_grads
+        # del aligner_grads
         # del inner_decoder
-        import gc
-        gc.collect()
+        # import gc
+        # gc.collect()
         # torch.cuda.empty_cache()
         
         return ret_dic
