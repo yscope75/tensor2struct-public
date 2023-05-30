@@ -530,8 +530,8 @@ class BayesModelAgnosticMetaLearning(nn.Module):
         # del inner_encoders
         # del inner_aligner
         # del inner_decoder
-        # import gc
-        # gc.collect()
+        import gc
+        gc.collect()
         # torch.cuda.empty_cache()
         
         return ret_dic
@@ -584,7 +584,7 @@ class BayesModelAgnosticMetaLearning(nn.Module):
         grad_kernel += -(torch.matmul(kernel_matrix*torch.transpose(invert_kernel_sum,0,1), params) +
                          torch.matmul(kernel_matrix, params)*invert_kernel_sum)
         grad_kernel /= h
-        
+        del kernel_matrix
         return grad_kernel, h
     
     @staticmethod
