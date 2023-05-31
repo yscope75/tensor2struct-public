@@ -172,7 +172,7 @@ class BMetaTrainer(train.Trainer):
 def main(args):
     # setup logger etc
     config, logger = train.setup(args)
-    torch.set_num_threads(48)
+    
     # Construct trainer and do training
     trainer = BMetaTrainer(logger, config)
     trainer.train(config, modeldir=args.logdir)
