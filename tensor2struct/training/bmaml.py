@@ -249,7 +249,7 @@ class BayesModelAgnosticMetaLearning(nn.Module):
         )
         ret_dic = {}
         bert_len = len(list(model.bert_model.parameters()))
-        particle_len = len(model_decoder_params[0])
+        particle_len = len(model_encoder_params[0])
         aligner_len = len(model_aligner_params)
         for _step in range(self.inner_steps):
             # for computing distance 
