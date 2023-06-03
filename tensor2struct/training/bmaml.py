@@ -347,11 +347,11 @@ class BayesModelAgnosticMetaLearning(nn.Module):
                 
                 distance_nll[i, :] = torch.nn.utils.parameters_to_vector(particle_grads)
             
-            particle_grads, _ = BayesModelAgnosticMetaLearning.get_kernel_wSGLD_B(params=inner_params_matrix,
+            grad_kernel, _ = BayesModelAgnosticMetaLearning.get_kernel_wSGLD_B(params=inner_params_matrix,
                                               num_of_particles=self.num_particles)
             
             # compute inner gradients with rbf kernel
-            inner_grads = distance_nll - particle_grads
+            inner_grads = distance_nll - grad_kernel
 
             # copy inner_grads to main network
             for i in range(self.num_particles):
