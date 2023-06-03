@@ -226,24 +226,30 @@ class BayesModelAgnosticMetaLearning(nn.Module):
         #     for p_tar, p_src in zip(model_decoder_params,
         #                     BayesModelAgnosticMetaLearning.vector_to_list_params(decoder_grads_vec, model_decoder_params)):
         #         p_tar.grad.data.add_(p_src)
-        inner_aligner_params = list(inner_aligner.parameters())
-        inner_decoder_params = list(inner_decoder.parameters())
         inner_optimizer = registry.construct(
-                "optimizer", inner_opt_config, params=list(inner_encoders.parameters()) 
-                + inner_aligner_params
-                + inner_decoder_params)
+                "optimizer", inner_opt_config, params=inner_encoders.parameters()
+                + inner_aligner.parameters()
+                + inner_decoder.parameters())
 
-        for p in list(inner_encoders.parameters()) + inner_aligner_params + inner_decoder_params:
+        for p in inner_encoders.parameters():
             if p.grad is None:
                 p.grad = torch.zeros_like(p)
                 
+        for p in inner_aligner.parameters():
+            if p.grad is None:
+                p.grad = torch.zeros_like(p)
+        
+        for p in inner_decoder.parameters():
+            if p.grad is None:
+                p.grad = torch.zeros_like(p)
+
         inner_params_matrix = torch.stack(
             [torch.nn.utils.parameters_to_vector(list(inner_encoders[i].parameters())) for i in range(self.num_particles)],
             dim=0
         )
         ret_dic = {}
         bert_len = len(list(model.bert_model.parameters()))
-        particle_len = len(model_encoder_params[0])
+        particle_len = inner_params_matrix.size(1)
         aligner_len = len(model_aligner_params)
         for _step in range(self.inner_steps):
             # for computing distance 
@@ -277,7 +283,7 @@ class BayesModelAgnosticMetaLearning(nn.Module):
                                           relation)
                     # attention memory 
                     memory = []
-                    include_in_memory = inner_encoders[0].include_in_memory
+                    include_in_memory = inner_encoders[i].include_in_memory
                     if "question" in include_in_memory:
                         memory.append(q_enc_new_item)
                     if "column" in include_in_memory:
@@ -293,7 +299,7 @@ class BayesModelAgnosticMetaLearning(nn.Module):
                         SpiderEncoderState(
                             state=None,
                             words_for_copying=enc_input["question_for_copying"],
-                            tokenizer=inner_encoders[0].tokenizer,
+                            tokenizer=inner_encoders[i].tokenizer,
                             memory=memory,
                             question_memory=q_enc_new_item,
                             schema_memory=torch.cat((c_enc_new_item, t_enc_new_item), dim=1),
@@ -318,8 +324,8 @@ class BayesModelAgnosticMetaLearning(nn.Module):
                 inner_loss.append(loss.item())
                 inner_grads = torch.autograd.grad(loss, 
                                                     list(inner_encoders[i].parameters()) 
-                                                    + inner_aligner_params 
-                                                    + inner_decoder_params,
+                                                    + list(inner_aligner.parameters())
+                                                    + list(inner_decoder.parameters()),
                                                     allow_unused=True)
                 particle_grads = inner_grads[:particle_len]
                 if aligner_grads is None:
@@ -341,11 +347,11 @@ class BayesModelAgnosticMetaLearning(nn.Module):
                 
                 distance_nll[i, :] = torch.nn.utils.parameters_to_vector(particle_grads)
             
-            grad_kernel, _ = BayesModelAgnosticMetaLearning.get_kernel_wSGLD_B(params=inner_params_matrix,
+            particle_grads, _ = BayesModelAgnosticMetaLearning.get_kernel_wSGLD_B(params=inner_params_matrix,
                                               num_of_particles=self.num_particles)
             
             # compute inner gradients with rbf kernel
-            inner_grads = distance_nll - grad_kernel
+            inner_grads = distance_nll - particle_grads
 
             # copy inner_grads to main network
             for i in range(self.num_particles):
@@ -357,7 +363,7 @@ class BayesModelAgnosticMetaLearning(nn.Module):
                     p_tar2.grad.data.add_(p_src)
             # copy aligner grads to the main network
             for p_tar1, p_tar2, p_src in zip(model_aligner_params, 
-                                             inner_aligner_params,
+                                             inner_aligner.parameters(),
                             aligner_grads):
                 if p_src is not None:
                     p_tar1.grad.data.add_(1/self.num_particles*p_src)
@@ -367,7 +373,7 @@ class BayesModelAgnosticMetaLearning(nn.Module):
                     p_tar2.grad.data.add_(torch.zeros_like(p_tar2))
             # copy decoder grads to the main network
             for p_tar1, p_tar2, p_src in zip(model_decoder_params,
-                                    inner_decoder_params,
+                                    inner_decoder.parameters(),
                             decoder_grads):
                 if p_src is not None:
                     p_tar1.grad.data.add_(1/self.num_particles*p_src)
@@ -407,7 +413,7 @@ class BayesModelAgnosticMetaLearning(nn.Module):
                                                         relation)
                     # attention memory 
                     memory = []
-                    include_in_memory = inner_encoders[0].include_in_memory
+                    include_in_memory = inner_encoders[i].include_in_memory
                     if "question" in include_in_memory:
                         memory.append(q_enc_new_item)
                     if "column" in include_in_memory:
@@ -423,7 +429,7 @@ class BayesModelAgnosticMetaLearning(nn.Module):
                         SpiderEncoderState(
                             state=None,
                             words_for_copying=enc_input["question_for_copying"],
-                            tokenizer=inner_encoders[0].tokenizer,
+                            tokenizer=inner_encoders[i].tokenizer,
                             memory=memory,
                             question_memory=q_enc_new_item,
                             schema_memory=torch.cat((c_enc_new_item, t_enc_new_item), dim=1),
@@ -528,10 +534,10 @@ class BayesModelAgnosticMetaLearning(nn.Module):
         final_loss = sum(inner_loss)/self.num_particles + sum(loss_over_pars)
         ret_dic["loss"] = final_loss
         # del inner_encoders
-        del inner_aligner
+        # del inner_aligner
         # del inner_decoder
-        import gc
-        gc.collect()
+        # import gc
+        # gc.collect()
         # torch.cuda.empty_cache()
         
         return ret_dic
