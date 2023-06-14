@@ -244,6 +244,117 @@ class RAT(torch.nn.Module):
     def forward(self, descs, q_enc, c_enc, t_enc, relations):
         return self.forward_unbatched(descs, q_enc, c_enc, t_enc, relations)
 
+class IterRat(torch.nn.Module):
+    def __init__(
+        self,
+        device,
+        hidden_size,
+        relations2id,
+        enable_latent_relations=False,
+        num_latent_relations=None,
+        combine_latent_relations=False,
+        tie_layers=False,
+        ff_size=None,
+        dropout=0.1,
+    ):
+        super().__init__()
+        self._device = device
+
+        if ff_size is None:
+            ff_size = hidden_size * 4
+
+        if combine_latent_relations:
+            assert enable_latent_relations
+        encoder_class = transformer.EncoderLayerWithLatentRelations
+        self.encoder = transformer.InterRATEncoder(
+            lambda: encoder_class(
+                hidden_size,
+                transformer.MultiHeadedAttentionWithRelations(
+                    1, hidden_size, dropout
+                ),
+                transformer.PositionwiseFeedForward(hidden_size, ff_size, dropout),
+                relations2id,
+                num_latent_relations,
+                enable_latent_relations=enable_latent_relations,
+                combine_latent_relations=combine_latent_relations,
+            ),
+            hidden_size,
+            tie_layers,
+        )
+        # init with xavier
+        for p in self.parameters():
+            if p.dim() > 1:
+                nn.init.xavier_uniform_(p)
+
+    def forward_unbatched(self, desc, q_enc, c_enc, t_enc, relation):
+        # enc shape: total len x batch (=1) x recurrent size
+        enc = torch.cat((q_enc, c_enc, t_enc), dim=0)
+
+        # enc shape: batch (=1) x total len x recurrent size
+        enc = enc.transpose(0, 1)
+        enc_new = self.encoder(enc, relation, mask=None)
+        c_base = q_enc.shape[0]
+        t_base = q_enc.shape[0] + c_enc.shape[0]
+        
+        return enc_new, c_base, t_base
+
+    def forward(self, descs, q_enc, c_enc, t_enc, relations):
+        return self.forward_unbatched(descs, q_enc, c_enc, t_enc, relations)
+
+class AfterRAT(torch.nn.Module):
+    def __init__(
+        self,
+        device,
+        num_layers,
+        num_heads,
+        hidden_size,
+        relations2id,
+        enable_latent_relations=False,
+        num_latent_relations=None,
+        combine_latent_relations=False,
+        tie_layers=False,
+        ff_size=None,
+        dropout=0.1,
+    ):
+        super().__init__()
+        self._device = device
+        self.num_heads = num_heads
+
+        if ff_size is None:
+            ff_size = hidden_size * 4
+
+        if combine_latent_relations:
+            assert enable_latent_relations
+        encoder_class = transformer.EncoderLayerWithLatentRelations
+        self.encoder = transformer.RATEncoder(
+            lambda: encoder_class(
+                hidden_size,
+                transformer.MultiHeadedAttentionWithRelations(
+                    num_heads, hidden_size, dropout
+                ),
+                transformer.PositionwiseFeedForward(hidden_size, ff_size, dropout),
+                relations2id,
+                num_latent_relations,
+                enable_latent_relations=enable_latent_relations,
+                combine_latent_relations=combine_latent_relations,
+            ),
+            hidden_size,
+            num_layers,
+            tie_layers,
+        )
+
+    def forward_unbatched(self, x, relation, c_base, t_base):
+
+        enc_new = self.encoder(x, relation, mask=None)
+
+        q_enc_new = enc_new[:, :c_base]
+        c_enc_new = enc_new[:, c_base:t_base]
+        t_enc_new = enc_new[:, t_base:]
+
+        return q_enc_new, c_enc_new, t_enc_new
+
+    def forward(self, x, relation, c_base, t_base):
+        return self.forward_unbatched(x, relation, c_base, t_base)
 
 class AlignmentWithRAT(torch.nn.Module):
     """

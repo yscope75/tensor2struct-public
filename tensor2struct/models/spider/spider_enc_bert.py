@@ -758,7 +758,141 @@ class SpiderEncoderBertTruncated(torch.nn.Module):
             c_enc_new_item,
             t_enc_new_item
         )
+        
+# Intermediate encoder for deep ensemble leanring 
+registry.register("encoder", "spider-iter-truncated")
+class SpiderIterBertTruncated(torch.nn.Module):
     
+    Preproc = SpiderEncoderBertPreproc
+    batched = True
+
+    def __init__(
+        self,
+        device,
+        preproc,
+        bert_version="bert-base-uncased",
+        include_in_memory=("question", "column", "table"),
+        rat_config={},
+        linking_config={},
+    ):
+        super().__init__()
+        self._device = device
+        self.preproc = preproc
+        self.linking_config = linking_config
+        self.include_in_memory = include_in_memory
+        self.base_enc_hidden_size = (
+            1024 if "large" in bert_version else 768
+        )
+        self.enc_hidden_size = self.base_enc_hidden_size
+     
+        
+        # rat intermediate module
+        iter_rat_module = {"iter_rat": rat.IterRat, "none": rat.NoOpUpdate}
+        self.iter_rat = registry.instantiate(
+            iter_rat_module[rat_config["iter_name"]],
+            rat_config,
+            unused_keys={"name"},
+            device=self._device,
+            relations2id=preproc.relations2id,
+            hidden_size=self.enc_hidden_size
+        )
+
+        self.tokenizer = self.preproc.tokenizer
+        # self.bert_model.resize_token_embeddings(
+        #    len(self.tokenizer)
+        # )  # several tokens added
+
+    def forward(self, desc, plm_output, relation):
+        # TODO: abstract the operations of batching for bert
+
+        (q_enc, col_enc, tab_enc) = plm_output
+        assert q_enc.size()[0] == len(desc["question_for_copying"])
+        assert col_enc.size()[0] == len(desc["columns"])
+        assert tab_enc.size()[0] == len(desc["tables"])
+
+        # rat update
+        # TODO: change this, question is in the protocal of build relations
+        (
+            enc_new,
+            c_base,
+            t_base,
+        ) = self.rat_update.forward_unbatched(
+            desc,
+            q_enc.unsqueeze(1),
+            col_enc.unsqueeze(1),
+            tab_enc.unsqueeze(1),
+            relation,
+        )
+        
+        return (
+            enc_new,
+            c_base,
+            t_base
+        )
+        
+# after iter encoder layer
+@registry.register("encode", "spider-bert-after")
+class SpiderEncoderBertAfter(torch.nn.Module):
+    Preproc = SpiderEncoderBertPreproc
+    batched = True
+    
+    def __init__(
+        self,
+        device,
+        preproc,
+        bert_version="bert-base-uncased",
+        include_in_memory=("question", "column", "table"),
+        rat_config={},
+        linking_config={},
+    ):
+        super().__init__()
+        self._device = device
+        self.preproc = preproc
+        self.linking_config = linking_config
+        self.include_in_memory = include_in_memory
+        self.base_enc_hidden_size = (
+            1024 if "large" in bert_version else 768
+        )
+        self.enc_hidden_size = self.base_enc_hidden_size
+     
+        
+        # rat
+        rat_modules = {"rat": rat.AfterRAT, "none": rat.NoOpUpdate}
+        self.rat_update = registry.instantiate(
+            rat_modules[rat_config["name"]],
+            rat_config,
+            unused_keys={"name"},
+            device=self._device,
+            relations2id=preproc.relations2id,
+            hidden_size=self.enc_hidden_size,
+        )
+
+        self.tokenizer = self.preproc.tokenizer
+        # self.bert_model.resize_token_embeddings(
+        #    len(self.tokenizer)
+        # )  # several tokens added
+
+    def forward(self, x, relation, c_base, t_base):
+
+        # rat update
+        # TODO: change this, question is in the protocal of build relations
+        (
+            q_enc_new_item,
+            c_enc_new_item,
+            t_enc_new_item,
+        ) = self.rat_update.forward_unbatched(
+            x,
+            relation,
+            c_base,
+            t_base,
+        )
+        
+        return (
+            q_enc_new_item,
+            c_enc_new_item,
+            t_enc_new_item
+        )
+        
 @registry.register("encoder", "spider-bert-truncated")
 class SpiderEncoderBertTruncated(torch.nn.Module):
 

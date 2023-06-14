@@ -4,7 +4,7 @@ import torch.utils.data
 
 from tensor2struct.models import abstract_preproc
 from tensor2struct.utils import registry
-from tensor2struct.modules import rat
+from tensor2struct.modules import rat, transformer
 
 import logging
 
@@ -182,40 +182,47 @@ class SemiBatchedEncDecModel(torch.nn.Module):
 @registry.register("model", "BayesEncDecV1")
 class BSemiBatchedEncDecModel(torch.nn.Module):
     """
-    Bayesian Meta Learning Encoder 
+    Deep ensemble learning with particles layers right after plm 
     Encoder is batched but decoder is unbatched, this is for Spider
     """
-
+    
     Preproc = EncDecPreproc
 
     def __init__(self, 
                  preproc, 
-                 device, 
+                 device,
+                 bert_model, 
+                 inter_encoder,
                  encoder, 
                  decoder, 
-                 num_particles=2,
+                 num_particles=5,
                  ):
         super().__init__()
         self.encoder_preproc = preproc.enc_preproc
         self.num_particles = num_particles
-        self.list_of_encoders = torch.nn.ModuleList()
+        # init pretrained language mode encoder
+        self.bert_model = registry.construct(
+            "pretrainedlm", bert_model, device=device, preproc=preproc.enc_preproc
+        )
+        self.list_first_rats = torch.nn.ModuleList()
         for i in range(num_particles):
             particle_encoder = registry.construct(
-                "encoder", encoder, device=device, preproc=self.encoder_preproc
+                "encoder", inter_encoder, device=device, preproc=self.encoder_preproc
             )
-            self.list_of_encoders.append(particle_encoder)
+            self.list_first_rats.append(particle_encoder)
             
-        # initialization for encoder return state
-        # matching 
+        self.encoder = registry.construct(
+            "encoder", encoder, device=device, preproc=preproc.enc_preproc
+        )
         # todo: remember to check the linking config
         self.schema_linking = registry.construct(
-            "schema_linking", self.list_of_encoders[0].linking_config, preproc=self.encoder_preproc, device=device,
+            "schema_linking", self.encoder.linking_config, preproc=self.encoder_preproc, device=device,
         )
-        
+
          # aligner
         self.aligner = rat.AlignmentWithRAT(
             device=device,
-            hidden_size=self.list_of_encoders[0].enc_hidden_size,
+            hidden_size=self.encoder.enc_hidden_size,
             relations2id=self.encoder_preproc.relations2id,
             enable_latent_relations=False,
         )
@@ -224,7 +231,7 @@ class BSemiBatchedEncDecModel(torch.nn.Module):
             "decoder", decoder, device=device, preproc=preproc.dec_preproc
         )
 
-        assert getattr(self.list_of_encoders[0], "batched")  # use batched enc by default
+        assert getattr(self.list_first_rats[0], "batched")  # use batched enc by default
 
     def forward(self, *input_items, compute_loss=True, infer=False):
         """
@@ -237,39 +244,65 @@ class BSemiBatchedEncDecModel(torch.nn.Module):
             that it's in inference mode
         """
         ret_dic = {}
-        input_item = input_items[0]
+        
+        if compute_loss:
+            assert len(input_items) == 1  # it's a batched version
+            loss = self._compute_loss_enc_batched(input_items[0])
+            ret_dic["loss"] = loss
+
+        if infer:
+            assert len(input_items) == 2  # unbatched version of inference
+            orig_item, preproc_item = input_items
+            infer_dic = self.begin_inference(orig_item, preproc_item)
+            ret_dic = {**ret_dic, **infer_dic}
+        return ret_dic
+
+    def _compute_loss_enc_batched(self, batch):
+        """
+        Default way of computing loss: enc returns a list, 
+        dec process enc outputs sequentially
+        """
+        losses = []
+        enc_states = self._compute_enc_states(batch)
+        for enc_state, (enc_input, dec_output) in zip(enc_states, batch):
+            ret_dic = self.decoder(dec_output, enc_state)
+            losses.append(ret_dic["loss"])
+        return torch.mean(torch.stack(losses, dim=0), dim=0)
+
+    def _compute_enc_states(self, enc_input):
         enc_states = []
         column_pointer_maps = [
-            {i: [i] for i in range(len(desc["columns"]))} for desc, _ in input_item
+            {i: [i] for i in range(len(desc["columns"]))} for desc, _ in enc_input
         ]
         table_pointer_maps = [
-            {i: [i] for i in range(len(desc["tables"]))} for desc, _ in input_item
+            {i: [i] for i in range(len(desc["tables"]))} for desc, _ in enc_input
         ]
+        plm_output = self.bert_model([enc_input for enc_input, dec_output in enc_input])
         
-        for batch_idx, (enc_input, _) in enumerate(input_item):
-            q_particle_list = []
-            c_particle_list = []
-            t_particle_list = []
-            words_for_copying = enc_input["question_for_copying"]
-            enc_input["question"] = words_for_copying
+        for batch_idx, (enc_input, _) in enumerate(enc_input):
+            
+            sample_embed = plm_output[batch_idx]
+            enc_new_particle_list = []
             relation = self.schema_linking(enc_input)
+            # Todo: handle c-
             for i in range(self.num_particles):
                 (
-                    q_enc_new_item,
-                    c_enc_new_item,
-                    t_enc_new_item,
-                ) = self.list_of_encoders[i](enc_input, relation)
-                q_particle_list.append(q_enc_new_item)
-                c_particle_list.append(c_enc_new_item)
-                t_particle_list.append(t_enc_new_item)
+                    enc_new,
+                    c_base,
+                    t_base,
+                ) = self.list_first_rats[i](enc_input, sample_embed, relation)
+                enc_new_particle_list.append(enc_new)
                 
-            q_enc_new_item = torch.stack(q_particle_list, dim=0).mean(dim=0)
-            c_enc_new_item = torch.stack(c_particle_list, dim=0).mean(dim=0)
-            t_enc_new_item = torch.stack(t_particle_list, dim=0).mean(dim=0)
+            enc_new = torch.stack(enc_new, dim=0).mean(dim=0)
             
+            (
+                q_enc_new_item,
+                c_enc_new_item,
+                t_enc_new_item
+            ) = self.encoder(enc_new, relation, c_base, t_base)
             # attention memory 
             memory = []
-            include_in_memory = self.list_of_encoders[0].include_in_memory
+            include_in_memory = self.encoder.include_in_memory
             if "question" in include_in_memory:
                 memory.append(q_enc_new_item)
             if "column" in include_in_memory:
@@ -277,16 +310,17 @@ class BSemiBatchedEncDecModel(torch.nn.Module):
             if "table" in include_in_memory:
                 memory.append(t_enc_new_item)
             memory = torch.cat(memory, dim=1)
+
             # alignment matrix
             align_mat_item = self.aligner(
                 enc_input, q_enc_new_item, c_enc_new_item, t_enc_new_item, relation
             )
-        
+
             enc_states.append(
                 SpiderEncoderState(
                     state=None,
                     words_for_copying=enc_input["question_for_copying"],
-                    tokenizer=self.list_of_encoders[0].tokenizer,
+                    tokenizer=self.encoder.tokenizer,
                     memory=memory,
                     question_memory=q_enc_new_item,
                     schema_memory=torch.cat((c_enc_new_item, t_enc_new_item), dim=1),
@@ -302,33 +336,12 @@ class BSemiBatchedEncDecModel(torch.nn.Module):
                     m2t_align_mat=align_mat_item[1],
                 )
             )
-        if compute_loss:
-            assert len(input_items) == 1  # it's a batched version
-            loss = self._compute_loss_enc_batched(input_items[0], enc_states)
-            ret_dic["loss"] = loss
-
-        if infer:
-            assert len(input_items) == 2  # unbatched version of inference
-            orig_item, preproc_item = input_items
-            infer_dic = self.begin_inference(orig_item, preproc_item)
-            ret_dic = {**ret_dic, **infer_dic}
-        return ret_dic
-
-    def _compute_loss_enc_batched(self, batch, enc_states):
-        """
-        Default way of computing loss: enc returns a list, 
-        dec process enc outputs sequentially
-        """
-        losses = []
-
-        for enc_state, (enc_input, dec_output) in zip(enc_states, batch):
-            ret_dic = self.decoder(dec_output, enc_state)
-            losses.append(ret_dic["loss"])
-        return torch.mean(torch.stack(losses, dim=0), dim=0)
-
+        
+        return enc_states
+    
     def begin_inference(self, orig_item, preproc_item):
-        enc_input, _ = preproc_item
-        (enc_state,) = self.encoder([enc_input])
+        enc_input, dec = preproc_item
+        (enc_state,) = self._compute_enc_states([(enc_input, dec)])
         return self.decoder(orig_item, enc_state, compute_loss=False, infer=True)
 
     def get_trainable_parameters(self):

@@ -245,6 +245,21 @@ class RATEncoder(nn.Module):
         return self.norm(x)
 
 
+class InterRATEncoder(torch.nn.Module):
+    "Intermidiate rat for ensemble model"
+    
+    def __init__(self, layer, layer_size, tie_layers=False):
+        super(InterRATEncoder, self).__init__()
+        if tie_layers:
+            self.layer = layer()
+        else:
+            self.layer = layer
+        self.norm = nn.LayerNorm(layer_size)
+        
+    def forward(self, x, relation, mask):
+        x = self.layer(x, relation, mask)
+        return self.norm(x)
+    
 # Adapted from The Annotated Transformer
 class Encoder(nn.Module):
     "Core encoder is a stack of N layers"
