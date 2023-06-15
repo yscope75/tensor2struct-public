@@ -218,7 +218,7 @@ class InterDeepEnsembleModelAgnostic(nn.Module):
         for i in range(self.num_particles):
             for p_tar, p_src in zip(model.list_first_rats[i].parameters(),
                                     InterDeepEnsembleModelAgnostic.vector_to_list_params(encoders_grads[i],
-                                                                                            model.list_first_grad[i].parameters())):
+                                                                                            model.list_first_rats[i].parameters())):
                 p_tar.grad.data.add_(p_src) # todo: divide by num_of_sample if inner is in ba
         # # copy bert grads
         for p_tar, p_src in zip(model.bert_model.parameters(),
