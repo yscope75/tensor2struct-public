@@ -207,7 +207,7 @@ class BSemiBatchedEncDecModel(torch.nn.Module):
         self.list_first_rats = torch.nn.ModuleList()
         for i in range(num_particles):
             particle_encoder = registry.construct(
-                "encoder", inter_encoder, device=device, preproc=self.encoder_preproc
+                "inter_encoder", inter_encoder, device=device, preproc=self.encoder_preproc
             )
             self.list_first_rats.append(particle_encoder)
             

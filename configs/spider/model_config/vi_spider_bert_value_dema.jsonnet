@@ -29,12 +29,15 @@ function(args, data_path=_data_path) spider_base(args, data_path=_data_path) {
 
     },
     model+:{
-        name: 'BayesEncDecV2',
+        name: 'BayesEncDecV1',
         bert_model: {
             name: 'bert-encoder',
             bert_version: $.args.bert_version,
             bert_token_type: $.args.bert_token_type,
         },
+        inter_encoder: {
+            name: 'spider-iter-truncated',
+        }
         encoder: {
             name: 'spider-bert-truncatedV2',
             bert_version: $.args.bert_version,

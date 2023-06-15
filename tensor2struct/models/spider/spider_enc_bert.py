@@ -760,7 +760,7 @@ class SpiderEncoderBertTruncated(torch.nn.Module):
         )
         
 # Intermediate encoder for deep ensemble leanring 
-registry.register("encoder", "spider-iter-truncated")
+registry.register("inter_encoder", "spider-iter-truncated")
 class SpiderIterBertTruncated(torch.nn.Module):
     
     Preproc = SpiderEncoderBertPreproc
@@ -787,9 +787,8 @@ class SpiderIterBertTruncated(torch.nn.Module):
      
         
         # rat intermediate module
-        iter_rat_module = {"iter_rat": rat.IterRat, "none": rat.NoOpUpdate}
         self.iter_rat = registry.instantiate(
-            iter_rat_module[rat_config["iter_name"]],
+            rat.IterRat,
             rat_config,
             unused_keys={"name"},
             device=self._device,
@@ -831,7 +830,7 @@ class SpiderIterBertTruncated(torch.nn.Module):
         )
         
 # after iter encoder layer
-@registry.register("encode", "spider-bert-after")
+@registry.register("encoder", "spider-bert-after")
 class SpiderEncoderBertAfter(torch.nn.Module):
     Preproc = SpiderEncoderBertPreproc
     batched = True

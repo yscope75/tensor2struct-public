@@ -14,7 +14,7 @@ import torch
 import wandb
 
 from tensor2struct.commands import train
-from tensor2struct.training import dema
+from tensor2struct.training import interdema
 from tensor2struct.utils import registry, random_state, vocab
 from tensor2struct.utils import saver as saver_mod
 
