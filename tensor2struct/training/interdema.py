@@ -157,7 +157,7 @@ class InterDeepEnsembleModelAgnostic(nn.Module):
                                         list(model.bert_model.parameters())
                                         + list(model.list_first_rats[i].parameters()) 
                                         + list(model.encoder.parameters()) 
-                                        + list(model.aligner.parameters()),
+                                        + list(model.aligner.parameters())
                                         + list(model.decoder.parameters()),
                                         allow_unused=True)
             
@@ -206,7 +206,7 @@ class InterDeepEnsembleModelAgnostic(nn.Module):
 
             distance_nll[i, :] = torch.nn.utils.parameters_to_vector(particle_grads)
         
-        _, grad_kernel, _ = DeepEnsembleModelAgnostic.get_kernal_wSGLD_B(params=params_matrix,
+        _, grad_kernel, _ = InterDeepEnsembleModelAgnostic.get_kernal_wSGLD_B(params=params_matrix,
                                             num_of_particles=self.num_particles)
         
         # compute inner gradients with rbf kernel
@@ -217,7 +217,7 @@ class InterDeepEnsembleModelAgnostic(nn.Module):
         # copy inner_grads to main network
         for i in range(self.num_particles):
             for p_tar, p_src in zip(model.list_first_grad[i].parameters(),
-                                    InDeepEnsembleModelAgnostic.vector_to_list_params(encoders_grads[i],
+                                    InterDeepEnsembleModelAgnostic.vector_to_list_params(encoders_grads[i],
                                                                                             model.list_first_grad[i].parameters())):
                 p_tar.grad.data.add_(p_src) # todo: divide by num_of_sample if inner is in ba
         # # copy bert grads
