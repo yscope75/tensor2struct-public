@@ -293,7 +293,7 @@ class BSemiBatchedEncDecModel(torch.nn.Module):
                 ) = self.list_first_rats[i](enc_input, sample_embed, relation)
                 enc_new_particle_list.append(enc_new)
                 
-            enc_new = torch.stack(enc_new, dim=0).mean(dim=0)
+            enc_new = torch.stack(enc_new_particle_list, dim=0).mean(dim=0)
             
             (
                 q_enc_new_item,
