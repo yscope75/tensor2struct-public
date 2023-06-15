@@ -760,7 +760,7 @@ class SpiderEncoderBertTruncated(torch.nn.Module):
         )
         
 # Intermediate encoder for deep ensemble leanring 
-registry.register("inter_encoder", "spider-iter-truncated")
+@registry.register("inter_encoder", "spider-iter-truncated")
 class SpiderIterBertTruncated(torch.nn.Module):
     
     Preproc = SpiderEncoderBertPreproc
@@ -815,7 +815,7 @@ class SpiderIterBertTruncated(torch.nn.Module):
             enc_new,
             c_base,
             t_base,
-        ) = self.rat_update.forward_unbatched(
+        ) = self.iter_rat.forward_unbatched(
             desc,
             q_enc.unsqueeze(1),
             col_enc.unsqueeze(1),
