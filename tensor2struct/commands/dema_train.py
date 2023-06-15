@@ -72,7 +72,7 @@ class DEMATrainer(train.Trainer):
                     config.get("lr_scheduler", {"name": "noop"}),
                     param_groups=optimizer.param_groups,
                 )
-            dema_trainer = dema.DEMA(
+            dema_trainer = interdema.IDEMA(
                 device=self.device,
                 num_particles=self.train_config.num_particles
             )
@@ -92,20 +92,11 @@ class DEMATrainer(train.Trainer):
             for p in self.model.parameters():
                 if p.grad is None:
                     p.grad = torch.zeros_like(p)
-            model_encoder_params = []
-            for i in range(self.train_config.num_particles):
-                model_encoder_params.append(list(self.model.list_of_encoders[i].parameters()))
             
-            # decoder params
-            model_aligner_params = list(self.model.aligner.parameters())
-            model_decoder_params = list(self.model.decoder.parameters())
             for _i in range(self.train_config.num_batch_accumulated):
                 batch = next(train_data_loader)
                 ret_dic = dema_trainer.ensemble_train(
                     self.model,
-                    model_encoder_params,
-                    model_aligner_params,
-                    model_decoder_params,
                     batch,
                     self.train_config.num_batch_accumulated
                 )
