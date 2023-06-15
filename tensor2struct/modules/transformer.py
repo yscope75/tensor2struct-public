@@ -253,7 +253,7 @@ class InterRATEncoder(torch.nn.Module):
         if tie_layers:
             self.layer = layer()
         else:
-            self.layer = layer
+            self.layer = layer()
         self.norm = nn.LayerNorm(layer_size)
         
     def forward(self, x, relation, mask):
