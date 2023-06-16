@@ -206,14 +206,14 @@ class InterDeepEnsembleModelAgnostic(nn.Module):
 
             distance_nll[i, :] = torch.nn.utils.parameters_to_vector(particle_grads)
         
-        _, grad_kernel, _ = InterDeepEnsembleModelAgnostic.get_kernal_wSGLD_B(params=params_matrix,
+        kernel_matrix, grad_kernel, _ = InterDeepEnsembleModelAgnostic.get_kernel(params=params_matrix,
                                             num_of_particles=self.num_particles)
         
         # compute inner gradients with rbf kernel
         # SVGD
-        # encoders_grads = (1/self.num_particles)*(torch.matmul(kernel_matrix, distance_nll) - grad_kernel)
+        encoders_grads = (1/self.num_particles)*(torch.matmul(kernel_matrix, distance_nll) - grad_kernel)
         # wSGLD_B
-        encoders_grads = distance_nll - grad_kernel
+        # encoders_grads = distance_nll - grad_kernel
         # copy inner_grads to main network
         for i in range(self.num_particles):
             for p_tar, p_src in zip(model.list_first_rats[i].parameters(),
