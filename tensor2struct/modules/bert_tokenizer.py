@@ -85,9 +85,12 @@ class BERTokenizer:
             snlp = stanza.Pipeline(lang=lang, use_gpu=True, tokenize_pretokenized=True)
             BERTokenizer.sp_nlp = StanzaLanguage(snlp)
         encodes = self._encode(text)
-        if "phobert" in self.version:
+        if ("phobert" in self.version):
             norm_tokens = [t.lower() for t in encodes.tokens[1:-1]]
             return norm_tokens
+        elif ("velectra" in self.version):
+            "Vietnamese Electra is cased"
+            return [t for t in encodes.tokens[1:-1]]
         else:
             tokens = encodes.tokens[1:-1]
             norm_tokens = [t.lemma_ for t in self.sp_nlp([tokens])]
@@ -112,7 +115,7 @@ class BERTokenizer:
             snlp = stanza.Pipeline(lang=lang, use_gpu=True, tokenize_pretokenized=True)
             BERTokenizer.sp_nlp = StanzaLanguage(snlp)
 
-        if "phobert" in self.version:
+        if ("phobert" in self.version) or ("velectra" in self.version):
             return []
         else:
             tokens = self.tokenizer.encode(text).tokens[1:-1]
