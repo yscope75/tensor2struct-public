@@ -91,6 +91,9 @@ class BERTokenizer:
         elif ("velectra" in self.version):
             "Vietnamese Electra is cased"
             return [t for t in encodes.tokens[1:-1]]
+        elif ("multilingual" in self.version and "cased" in self.version):
+            "for bert base multilingual cased"
+            return [t for t in encodes.tokens[1:-1]]
         else:
             tokens = encodes.tokens[1:-1]
             norm_tokens = [t.lemma_ for t in self.sp_nlp([tokens])]
