@@ -60,7 +60,8 @@ class InterDeepEnsembleModelAgnostic(nn.Module):
     def particles_base_train(self, 
                              model, 
                              batch, 
-                             num_batch_accumulated):
+                             num_batch_accumulated,
+                             prior_scale=1e-3):
         assert model.training
         
         inner_inter_params = []
@@ -211,7 +212,7 @@ class InterDeepEnsembleModelAgnostic(nn.Module):
         
         # compute inner gradients with rbf kernel
         # SVGD
-        encoders_grads = (1/self.num_particles)*(torch.matmul(kernel_matrix, distance_nll) - grad_kernel)
+        encoders_grads = (1/self.num_particles)*(torch.matmul(kernel_matrix, distance_nll) + prior_scale*params_matrix - grad_kernel)
         # wSGLD_B
         # encoders_grads = distance_nll - grad_kernel
         # copy inner_grads to main network
@@ -285,7 +286,7 @@ class InterDeepEnsembleModelAgnostic(nn.Module):
         return kernel_matrix, grad_kernel, h
 
     @staticmethod
-    def get_kernal_wSGLD_B(params: torch.Tensor, num_of_particles):
+    def get_kernel_wSGLD_B(params: torch.Tensor, num_of_particles):
         """
         Compute the RBF kernel and repulsive term for wSGLD 
         

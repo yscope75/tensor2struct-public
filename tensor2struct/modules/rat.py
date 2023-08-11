@@ -282,9 +282,9 @@ class IterRat(torch.nn.Module):
             tie_layers,
         )
         # init with xavier
-        for p in self.parameters():
-            if p.dim() > 1:
-                nn.init.xavier_uniform_(p)
+        # for p in self.parameters():
+        #     if p.dim() > 1:
+        #         nn.init.xavier_uniform_(p)
 
     def forward_unbatched(self, desc, q_enc, c_enc, t_enc, relation):
         # enc shape: total len x batch (=1) x recurrent size
