@@ -270,7 +270,7 @@ class IterRat(torch.nn.Module):
             lambda: encoder_class(
                 hidden_size,
                 transformer.MultiHeadedAttentionWithRelations(
-                    1, hidden_size, dropout
+                    8, hidden_size, dropout
                 ),
                 transformer.PositionwiseFeedForward(hidden_size, ff_size, dropout),
                 relations2id,
