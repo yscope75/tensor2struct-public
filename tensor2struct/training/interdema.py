@@ -211,8 +211,8 @@ class InterDeepEnsembleModelAgnostic(nn.Module):
                                             num_of_particles=self.num_particles)
         
         # compute inner gradients with rbf kernel
-        # SVGD
-        encoders_grads = (1/self.num_particles)*(torch.matmul(kernel_matrix, distance_nll) + prior_scale*params_matrix - grad_kernel)
+        # SVGD + prior_scale*params_matrix
+        encoders_grads = (1/self.num_particles)*(torch.matmul(kernel_matrix, distance_nll) - grad_kernel)
         # wSGLD_B
         # encoders_grads = distance_nll - grad_kernel
         # copy inner_grads to main network
