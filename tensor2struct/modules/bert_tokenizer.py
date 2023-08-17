@@ -94,6 +94,9 @@ class BERTokenizer:
         elif ("multilingual" in self.version and "cased" in self.version):
             "for bert base multilingual cased"
             return [t for t in encodes.tokens[1:-1]]
+        elif ("xlm" in self.version):
+            norm_tokens = [t.lower() for t in encodes.tokens[1:-1]]
+            return norm_tokens
         else:
             tokens = encodes.tokens[1:-1]
             norm_tokens = [t.lemma_ for t in self.sp_nlp([tokens])]
