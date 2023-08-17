@@ -344,9 +344,9 @@ class AfterRAT(torch.nn.Module):
         )
         
         # init with xavier
-        for p in self.parameters():
-            if p.dim() > 1:
-                nn.init.xavier_uniform_(p)
+        # for p in self.parameters():
+        #     if p.dim() > 1:
+        #         nn.init.xavier_uniform_(p)
 
     def forward_unbatched(self, x, relation, c_base, t_base):
 
