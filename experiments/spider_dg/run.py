@@ -12,6 +12,7 @@ from experiments.spider_dg import (
     meta_train,
     dema_train,
     bayesian_meta_train,
+    eqrm_train,
 )
 
 
@@ -34,6 +35,13 @@ class DEMATrainConfig:
     config_args = attr.ib()
     logdir = attr.ib()
 
+
+@attr.s
+class EQRMTrainConfig:
+    config = attr.ib()
+    config_args = attr.ib()
+    logdir = attr.ib()
+    
 
 def main():
     parser = argparse.ArgumentParser()
@@ -63,7 +71,7 @@ def main():
     project = exp_config["project"]
 
     # dist train need to start a wandb session in each process, not a global one
-    if args.mode in ["train", "meta_train", "dema_train", "bayesian_meta_train"]:
+    if args.mode in ["train", "meta_train", "dema_train", "bayesian_meta_train", "eqrm_train"]:
         wandb.init(project=project, group=expname, job_type=args.mode)
 
     if args.mode == "train":
@@ -78,6 +86,9 @@ def main():
     elif args.mode == "bayesian_meta_train":
         train_config = MetaTrainConfig(model_config_file, model_config_args, logdir)
         bayesian_meta_train.main(train_config)
+    elif args.mode == "eqrm_train":
+        train_config = EQRMTrainConfig(model_config_file, model_config_args, logdir)
+        eqrm_train.main(train_config)
 
 
 if __name__ == "__main__":
