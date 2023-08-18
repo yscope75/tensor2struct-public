@@ -216,6 +216,11 @@ function(args={}, data_path=_data_path) {
             lr: $.args.meta_train_lr,
         },
     },
+    
+    eqrm_train: $.train + {
+        burnin_iters: $.args.burnin_iters,
+        quantile: $.args.quantile,
+    },
 
     meta_test: $.meta_train + {
         data_scheduler: {
