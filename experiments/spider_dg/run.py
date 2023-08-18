@@ -46,7 +46,7 @@ class EQRMTrainConfig:
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "mode", choices=["train", "meta_train", "dema_train", "bayesian_meta_train"], help="train/meta_train/dist_train",
+        "mode", choices=["train", "meta_train", "dema_train", "bayesian_meta_train", "eqrm_train"], help="train/meta_train/dist_train",
     )
     parser.add_argument("exp_config_file", help="jsonnet file for experiments")
     args = parser.parse_args()
