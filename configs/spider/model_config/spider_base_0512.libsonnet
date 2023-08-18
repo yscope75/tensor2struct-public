@@ -49,6 +49,11 @@ function(args={}, data_path=_data_path) {
         mask_type: "l0",
         slow_parameters: null,
         data_scheduler: "mixed_db_scheduler",
+
+        # fields do not exist
+        meta_train_lr: 5e-4,
+        meta_train_opt: "sgd",
+        num_particles: 5,
     },
 
     # merge args, to support this, you have to use $.args in your inherited function
