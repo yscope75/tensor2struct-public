@@ -2,7 +2,7 @@
     local exp_id = 0,
     project: "spider_value",
     logdir: "log/spider/bert_value_%d" %exp_id,
-    model_config: "configs/spider/model_config/vi_spider_bert_value.jsonnet",
+    model_config: "configs/spider/model_config/vi_spider_bert_value_b.jsonnet",
     model_config_args: {
         # data 
         use_other_train: true,
@@ -24,11 +24,11 @@
         include_literals: true,
 
         # training
-        bs: 12,  # bookmark here
+        bs: 4,  # bookmark here
         att: 0,
         lr: 6e-4,
         clip_grad: 0.3,
-        num_batch_accumulated: 1,  # bookmark here
+        num_batch_accumulated: 3,  # bookmark here
         // num_particles: 5, 
         # eqrm
         burnin_iters: 2500,
