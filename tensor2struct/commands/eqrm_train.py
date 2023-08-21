@@ -90,7 +90,7 @@ class EQRMTrainer(train.Trainer):
                     )
             
             if reset_opt:
-                print('Reset optimizer and lr scheduler')
+                print('Reset optimizer and lr scheduler at', last_step)
                 if self.train_config.use_bert_training:
                     optimizer = registry.construct(
                         "optimizer",
@@ -169,7 +169,7 @@ class EQRMTrainer(train.Trainer):
                     import gc; gc.collect()
                     
                     # load again
-                    self.load_model()
+                    self.load_model(config)
                     optimizer, lr_scheduler, eqrm_trainer = self.load_optimizer(config)
                     saver, _ = self.load_saver(config, modeldir, optimizer)
                     

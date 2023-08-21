@@ -56,7 +56,7 @@ class EQRM(nn.Module):
             # Burn-in/anneanlig period uses ERM like penalty methods
             loss = torch.mean(losses)
         else:
-            print('alpha-quantile')
+            # print('alpha-quantile')
             # Loss is the alpha-quantile value
             self.dist.estimate_parameters(losses)
             loss = self.dist.icdf(self.alpha)

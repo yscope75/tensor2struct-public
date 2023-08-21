@@ -1,9 +1,7 @@
+import math
+
 import numpy as np
 import torch
-
-import math 
-import sys
-import collections
 
 
 class Kernel(torch.nn.Module):
