@@ -24,19 +24,26 @@
         include_literals: true,
 
         # training
-        bs: 4,  # bookmark here
+        bs: 12,  # bookmark here
         att: 0,
         lr: 6e-4,
         clip_grad: 0.3,
-        num_batch_accumulated: 3,  # bookmark here
+        num_batch_accumulated: 1,  # bookmark here
         // num_particles: 5, 
-        # eqrm
+        
+        # eqrm setting
         burnin_iters: 2500,
         quantile: 0.75,
         max_steps: 20000,
         save_threshold: 19000,
         use_bert_training: true,
         device: "cuda:0",
+
+        # group database scheduler
+        data_scheduler: "group_db_scheduler",
+        n_domains: 3,
+        num_batch_per_train: 1,
+        uniform_over_group: true,
     },
 
     eval_section: "val",

@@ -15,7 +15,9 @@ class EQRMTrainConfig(train.TrainConfig):
     burnin_iters = attr.ib(default=2500)
     quantile = attr.ib(default=0.75)
     # lr = attr.ib(default=1e-6)
-    
+    n_domains = attr.ib(default=12)
+    data_scheduler = attr.ib(default='group_db_scheduler')
+
 
 class EQRMTrainer(train.Trainer):
     def load_train_config(self):
@@ -73,11 +75,11 @@ class EQRMTrainer(train.Trainer):
 
             return optimizer, lr_scheduler, eqrm_trainer
 
-    def step(self, config, train_data_loader, optimizer, lr_scheduler, last_step, eqrm_trainer):
+    def step(self, config, train_data_scheduler, optimizer, lr_scheduler, last_step, eqrm_trainer):
         with self.model_random:
             losses = []
             for _i in range(self.train_config.num_batch_accumulated):  
-                batch = next(train_data_loader)
+                batch = train_data_scheduler.get_batch(last_step)
                 losses =  losses + eqrm_trainer.train(self.model, batch, last_step)
             
             loss, reset_opt = eqrm_trainer.transform(losses, last_step)
@@ -136,11 +138,22 @@ class EQRMTrainer(train.Trainer):
                     wandb.log({f"lr_{i}": new_lr[i]}, step=last_step)
                 # print(f'{[param["lr"] for param in optimizer.param_groups]}')
 
+    def load_train_data(self):
+        with self.data_random:
+            train_data = self.model_preproc.dataset("train")
+            train_data_scheduler = registry.construct(
+                "data_scheduler",
+                self.train_config.data_scheduler,
+                examples=train_data,
+                max_train_step=self.train_config.max_steps,
+            )
+        return train_data_scheduler
+        
     def train(self, config, modeldir):
         optimizer, lr_scheduler, eqrm_trainer = self.load_optimizer(config)
         saver, last_step = self.load_saver(config, modeldir, optimizer=optimizer, eqrm_trainer=eqrm_trainer)
         
-        train_data_loader = self.load_train_data()
+        train_data_scheduler = self.load_train_data()
         train_eval_data_loader, val_data_loader = self.load_eval_data()
         
         with self.data_random:
@@ -149,7 +162,7 @@ class EQRMTrainer(train.Trainer):
                 oom = False
                 try: 
                     val_stats = self.eval_model(last_step, train_eval_data_loader, val_data_loader)
-                    self.step(config, train_data_loader, optimizer, lr_scheduler, last_step, eqrm_trainer)
+                    self.step(config, train_data_scheduler, optimizer, lr_scheduler, last_step, eqrm_trainer)
                     last_step = last_step + 1 
                     self.save_state(saver, modeldir, last_step)
                 except RuntimeError as e:
@@ -171,7 +184,7 @@ class EQRMTrainer(train.Trainer):
                     # load again
                     self.load_model(config)
                     optimizer, lr_scheduler, eqrm_trainer = self.load_optimizer(config)
-                    saver, _ = self.load_saver(config, modeldir, optimizer)
+                    saver, _ = self.load_saver(config, modeldir, optimizer=optimizer)
                     
                     # remove the tmp checkpoint
                     os.unlink(os.path.join(modeldir, f"model_checkpoint-{tmp_step}"))
