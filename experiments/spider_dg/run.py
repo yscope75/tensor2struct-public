@@ -45,14 +45,14 @@ class EQRMTrainConfig:
 
 def main():
     parser = argparse.ArgumentParser()
-    # parser.add_argument(
-    #     "mode", choices=["train", "meta_train", "dema_train", "bayesian_meta_train", "eqrm_train"], help="train/meta_train/dist_train",
-    # )
-    # parser.add_argument("exp_config_file", help="jsonnet file for experiments")
+    parser.add_argument(
+        "mode", choices=["train", "meta_train", "dema_train", "bayesian_meta_train", "eqrm_train"], help="train/meta_train/dist_train",
+    )
+    parser.add_argument("exp_config_file", help="jsonnet file for experiments")
     args = parser.parse_args()
-    args.mode = "eqrm_train"
+    # args.mode = "eqrm_train"
     # args.exp_config_file = '/media/doublemint/SharedDisk/repo/SummerProject/Text-to-SQL/tensor2struct-yscope75/tensor2struct-public/configs/spider/run_config/run_spider_dgmaml_b.jsonnet'
-    args.exp_config_file = '/media/doublemint/SharedDisk/repo/SummerProject/Text-to-SQL/tensor2struct-yscope75/tensor2struct-public/configs/spider/run_config/run_spider_eqrm.jsonnet'
+    # args.exp_config_file = '/media/doublemint/SharedDisk/repo/SummerProject/Text-to-SQL/tensor2struct-yscope75/tensor2struct-public/configs/spider/run_config/run_spider_eqrm.jsonnet'
     exp_config = json.loads(_jsonnet.evaluate_file(args.exp_config_file))
     model_config_file = exp_config["model_config"]
     if "model_config_args" in exp_config:
