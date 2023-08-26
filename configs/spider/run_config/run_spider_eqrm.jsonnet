@@ -41,7 +41,7 @@
 
         # group database scheduler
         data_scheduler: "group_db_scheduler",
-        n_domains: 12,
+        n_domains: 8,
         num_batch_per_train: 1,
         uniform_over_group: true,
 
