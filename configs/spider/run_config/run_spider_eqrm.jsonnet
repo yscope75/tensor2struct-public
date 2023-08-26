@@ -24,7 +24,7 @@
         include_literals: true,
 
         # training
-        bs: 12,  # bookmark here
+        bs: 16,  # bookmark here
         att: 0,
         lr: 6e-4,
         clip_grad: 0.3,

@@ -200,8 +200,8 @@ class Trainer:
             for batch in loader:
                 yield batch
 
-    def eval_model(self, last_step, train_eval_data_loader, val_data_loader):
-        if last_step % self.train_config.eval_every_n == 0:
+    def eval_model(self, last_step, train_eval_data_loader, val_data_loader, force=False):
+        if last_step % self.train_config.eval_every_n == 0 or force:
             if self.train_config.eval_on_train:
                 self._eval_model(
                     self.logger,
@@ -254,7 +254,6 @@ class Trainer:
             {f"{eval_section}_eval_{k}": v for k, v in stats.items()}, step=last_step
         )
         
-        print(stats['loss']) 
         return stats['loss']
 
 

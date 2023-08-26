@@ -21,6 +21,7 @@ from experiments.spider_dg import (
 exp_config = dict()
 model_config_file = ''
 model_config_args = ''
+state = 0  # 0 - train || 1 - params search but dataset is not loaded || 2 - params search but dataset loaded
 
 
 @attr.s
@@ -66,7 +67,7 @@ def train(type):
         bayesian_meta_train.main(train_config)
     elif type == "eqrm_train":
         train_config = EQRMTrainConfig(model_config_file, model_config_args, logdir)
-        return eqrm_train.main(train_config)  # return score on dev set
+        return eqrm_train.main(train_config, state)  # return score on dev set
 
 
 # define an objective function to be maximized
@@ -91,14 +92,14 @@ def objective(trial):
 def main():
     global exp_config, model_config_file, model_config_args, logdir
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "mode", choices=["train", "meta_train", "dema_train", "bayesian_meta_train", "eqrm_train", "params_search"], help="train/meta_train/dist_train",
-    )
-    parser.add_argument("exp_config_file", help="jsonnet file for experiments")
+    # parser.add_argument(
+    #     "mode", choices=["train", "meta_train", "dema_train", "bayesian_meta_train", "eqrm_train", "params_search"], help="train/meta_train/dist_train",
+    # )
+    # parser.add_argument("exp_config_file", help="jsonnet file for experiments")
     args = parser.parse_args()
-    # args.mode = "params_search"
+    args.mode = "params_search"
     # args.exp_config_file = '/media/doublemint/SharedDisk/repo/SummerProject/Text-to-SQL/tensor2struct-yscope75/tensor2struct-public/configs/spider/run_config/run_spider_dgmaml_b.jsonnet'
-    # args.exp_config_file = '/media/doublemint/SharedDisk/repo/SummerProject/Text-to-SQL/tensor2struct-yscope75/tensor2struct-public/configs/spider/run_config/run_spider_eqrm.jsonnet'
+    args.exp_config_file = '/media/doublemint/SharedDisk/repo/SummerProject/Text-to-SQL/tensor2struct-yscope75/tensor2struct-public/configs/spider/run_config/run_spider_eqrm.jsonnet'
     exp_config = json.loads(_jsonnet.evaluate_file(args.exp_config_file))
     model_config_file = exp_config["model_config"]
     if "model_config_args" in exp_config:
@@ -124,6 +125,8 @@ def main():
     
     if args.mode == "params_search":
         # create a study object and optimize the objective function
+        global state
+        state = 1
         study = optuna.create_study(direction='maximize')
         study.optimize(objective, n_trials=100)
     else:
