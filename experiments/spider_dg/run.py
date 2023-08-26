@@ -66,7 +66,7 @@ def train(type, params_searching=False):
         bayesian_meta_train.main(train_config)
     elif type == "eqrm_train":
         train_config = EQRMTrainConfig(model_config_file, model_config_args, logdir)
-        return eqrm_train.main(train_config, params_searching)  # return score on dev set
+        return eqrm_train.main(train_config, params_searching=params_searching)  # return score on dev set
 
 
 # define an objective function to be maximized
