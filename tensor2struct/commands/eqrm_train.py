@@ -149,7 +149,7 @@ class EQRMTrainer(train.Trainer):
             )
         return train_data_scheduler
         
-    def train(self, config, modeldir):
+    def train(self, config, modeldir, params_searching=False):
         optimizer, lr_scheduler, eqrm_trainer = self.load_optimizer(config)
         saver, last_step = self.load_saver(config, modeldir, optimizer=optimizer, eqrm_trainer=eqrm_trainer)
         
@@ -188,11 +188,11 @@ class EQRMTrainer(train.Trainer):
                     # remove the tmp checkpoint
                     os.unlink(os.path.join(modeldir, f"model_checkpoint-{tmp_step}"))
         
-            # saver.save(modeldir, last_step)
+            if not params_searching:
+                saver.save(modeldir, last_step)
        
         # score on dev set
         val_stats = self.eval_model(last_step, train_eval_data_loader, val_data_loader, force=True)
-        print(val_stats)
         return val_stats
 
 def _optimizer_to(optimizer, device):

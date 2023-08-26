@@ -51,7 +51,7 @@ class EQRMTrainConfig:
     logdir = attr.ib()
     
 
-def train(type):
+def train(type, params_searching=False):
     if type == "train":
         train_config = TrainConfig(model_config_file, model_config_args, logdir)
         train.main(train_config)
@@ -66,7 +66,7 @@ def train(type):
         bayesian_meta_train.main(train_config)
     elif type == "eqrm_train":
         train_config = EQRMTrainConfig(model_config_file, model_config_args, logdir)
-        return eqrm_train.main(train_config)  # return score on dev set
+        return eqrm_train.main(train_config, params_searching)  # return score on dev set
 
 
 # define an objective function to be maximized
@@ -86,7 +86,7 @@ def objective(trial):
         model_config_args = None  
     
     # score on dev set
-    return train("eqrm_train")
+    return train("eqrm_train", params_searching=True)
 
 
 def main():
