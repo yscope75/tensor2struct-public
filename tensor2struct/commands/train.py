@@ -201,7 +201,7 @@ class Trainer:
                 yield batch
 
     def eval_model(self, last_step, train_eval_data_loader, val_data_loader):
-        if last_step % self.train_config.eval_every_n == 0 or force:
+        if last_step % self.train_config.eval_every_n == 0:
             if self.train_config.eval_on_train:
                 self._eval_model(
                     self.logger,
@@ -253,7 +253,7 @@ class Trainer:
         wandb.log(
             {f"{eval_section}_eval_{k}": v for k, v in stats.items()}, step=last_step
         )
-        
+
 
 def add_parser():
     parser = argparse.ArgumentParser()
