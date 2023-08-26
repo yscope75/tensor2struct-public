@@ -80,12 +80,7 @@ class EQRMTrainer(train.Trainer):
             losses = []
             for _i in range(self.train_config.num_batch_accumulated):  
                 batch = train_data_scheduler.get_batch(last_step)
-                print(len(batch))
-                for sample in batch:
-                    print(sample[0]['question_text'])
-
-                break
-                # losses =  losses + eqrm_trainer.train(self.model, batch, last_step)
+                losses =  losses + eqrm_trainer.train(self.model, batch, last_step)
             
             loss, reset_opt = eqrm_trainer.transform(losses, last_step)
             
@@ -168,7 +163,7 @@ class EQRMTrainer(train.Trainer):
                     self.eval_model(last_step, train_eval_data_loader, val_data_loader)
                     self.step(config, train_data_scheduler, optimizer, lr_scheduler, last_step, eqrm_trainer)
                     last_step = last_step + 1 
-                    # self.save_state(saver, modeldir, last_step)
+                    self.save_state(saver, modeldir, last_step)
                 except RuntimeError as e:
                     err_msg = str(e)
                     self.logger.warn(f"Forward Failed: {err_msg}")        

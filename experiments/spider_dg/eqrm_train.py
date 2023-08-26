@@ -25,7 +25,7 @@ class EQRMTrainer(eqrm_train.EQRMTrainer):
                 self.logger.info("Gradient clipping is recommend for BERT training")
 
 
-def main(args, state):
+def main(args):
     # setup logger etc
     config, logger = train.setup(args=args)
     
