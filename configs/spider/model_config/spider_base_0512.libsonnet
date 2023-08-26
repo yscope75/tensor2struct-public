@@ -60,6 +60,7 @@ function(args={}, data_path=_data_path) {
         quantile: 0.75,
         n_domains: 12,
         uniform_over_group: true,
+        num_warmup_steps: 500,
     },
 
     # merge args, to support this, you have to use $.args in your inherited function

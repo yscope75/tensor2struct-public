@@ -212,7 +212,7 @@ class Trainer:
                     num_eval_items=self.train_config.num_eval_items,
                 )
             if self.train_config.eval_on_val:
-                self._eval_model(
+                return self._eval_model(
                     self.logger,
                     self.model,
                     last_step,
@@ -253,6 +253,8 @@ class Trainer:
         wandb.log(
             {f"{eval_section}_eval_{k}": v for k, v in stats.items()}, step=last_step
         )
+        
+        return stats['loss']
 
 
 def add_parser():

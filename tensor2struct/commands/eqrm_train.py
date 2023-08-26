@@ -156,8 +156,8 @@ class EQRMTrainer(train.Trainer):
         train_data_scheduler = self.load_train_data()
         train_eval_data_loader, val_data_loader = self.load_eval_data()
         
+        val_stats = 0  # place holder for loss value of evaluation on validation set
         with self.data_random:
-            val_stats = 0  # place holder for loss value of evaluation on validation set
             while last_step < self.train_config.max_steps:
                 oom = False
                 try: 

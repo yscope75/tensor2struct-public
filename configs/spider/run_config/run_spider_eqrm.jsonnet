@@ -24,7 +24,7 @@
         include_literals: true,
 
         # training
-        bs: 6,  # bookmark here
+        bs: 12,  # bookmark here
         att: 0,
         lr: 6e-4,
         clip_grad: 0.3,
@@ -41,9 +41,12 @@
 
         # group database scheduler
         data_scheduler: "group_db_scheduler",
-        n_domains: 6,
+        n_domains: 12,
         num_batch_per_train: 1,
         uniform_over_group: true,
+
+        # lr scheduler
+        num_warmup_steps: 500,
     },
 
     eval_section: "val",

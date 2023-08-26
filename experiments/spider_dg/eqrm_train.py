@@ -31,7 +31,7 @@ def main(args):
     
     # construct trainer and do training
     trainer = EQRMTrainer(logger, config)
-    trainer.train(config, modeldir=args.logdir)
+    return trainer.train(config, modeldir=args.logdir)
 
 
 if __name__ == '__main__':
