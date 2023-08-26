@@ -254,6 +254,7 @@ class Trainer:
             {f"{eval_section}_eval_{k}": v for k, v in stats.items()}, step=last_step
         )
         
+        print(stats['loss']) 
         return stats['loss']
 
 

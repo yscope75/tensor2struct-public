@@ -191,6 +191,7 @@ class EQRMTrainer(train.Trainer):
         
             saver.save(modeldir, last_step)
         
+        print(val_stats)
         return val_stats
 
 def _optimizer_to(optimizer, device):
