@@ -210,3 +210,64 @@ class DBScheduler(DataScheduler):
 
     def get_batch(self, step=None):
         return next(self._task_generator)
+
+
+@registry.register("data_scheduler", "group_db_scheduler")
+class GroupDBScheduler(DBScheduler):
+    """
+    Sample N domains (grouped by `db_id`),
+    each domain has n_points = batch_size // n_domains
+    """
+
+    def __init__(
+        self,
+        examples,
+        batch_size,
+        n_domains,
+        num_batch_per_train=1,
+        uniform_over_group=True,
+    ):
+        # inherit from DBScheduler
+        super().__init__(examples, batch_size, num_batch_per_train)
+        
+        # sampler by group
+        self.n_domains = n_domains
+        self.n_points_per_domain = batch_size // n_domains
+        self.uniform_over_group = uniform_over_group
+
+        self.iterators_by_db, self.dbid2count = self._create_iterators(
+            self.examples, self.n_points_per_domain
+        )
+        
+        self._task_generator = self._yield_tasks_by_id()
+
+    def _yield_tasks_by_id(self):
+        # inherit from DBScheduler
+        id2iterators = self.iterators_by_db
+        id2count = self.dbid2count
+
+        _counts = [id2count[_id] for _id in self.db_list]
+        all_count = sum(_counts)
+        
+        if self.uniform_over_group:
+            _p = [_c / all_count for _c in _counts]
+        else:
+            _p = None
+
+        while True:
+            # db_id = random.sample(self.db_list, 1)[0]
+            batch = []
+            
+            list_db_id = np.random.choice(self.db_list, self.n_domains, p=_p, replace=False)  # Replace=False if the group is larger than the sample size (obviously)
+            for db_id in list_db_id:
+                sample_group = next(id2iterators[db_id])
+                batch = batch + sample_group
+
+            # for i in range(self.n_domains):
+                # using uniform distribution
+                # db_id = np.random.choice(self.db_list, self.num_batch_per_train, p=_p, replace=True)
+                # group_with_db_id = next(id2iterators[db_id[0]])
+                # batch = batch + group_with_db_id
+        
+            yield batch
+             
