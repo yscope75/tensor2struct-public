@@ -97,16 +97,13 @@ def main():
     )
     parser.add_argument("exp_config_file", help="jsonnet file for experiments")
     args = parser.parse_args()
-    # args.mode = "params_search"
-    # args.exp_config_file = '/media/doublemint/SharedDisk/repo/SummerProject/Text-to-SQL/tensor2struct-yscope75/tensor2struct-public/configs/spider/run_config/run_spider_dgmaml_b.jsonnet'
-    # args.exp_config_file = '/media/doublemint/SharedDisk/repo/SummerProject/Text-to-SQL/tensor2struct-yscope75/tensor2struct-public/configs/spider/run_config/run_spider_eqrm.jsonnet'
     exp_config = json.loads(_jsonnet.evaluate_file(args.exp_config_file))
     model_config_file = exp_config["model_config"]
     if "model_config_args" in exp_config:
         model_config_args = json.dumps(exp_config["model_config_args"])
     else:
         model_config_args = None
-    
+
     # cluster base dir
     log_base_dir = os.environ.get("LOG_BASE_DIR", None)
     if log_base_dir is None:

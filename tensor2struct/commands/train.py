@@ -200,7 +200,7 @@ class Trainer:
             for batch in loader:
                 yield batch
 
-    def eval_model(self, last_step, train_eval_data_loader, val_data_loader, force=False):
+    def eval_model(self, last_step, train_eval_data_loader, val_data_loader):
         if last_step % self.train_config.eval_every_n == 0 or force:
             if self.train_config.eval_on_train:
                 self._eval_model(
@@ -212,7 +212,7 @@ class Trainer:
                     num_eval_items=self.train_config.num_eval_items,
                 )
             if self.train_config.eval_on_val:
-                return self._eval_model(
+                self._eval_model(
                     self.logger,
                     self.model,
                     last_step,
@@ -254,8 +254,6 @@ class Trainer:
             {f"{eval_section}_eval_{k}": v for k, v in stats.items()}, step=last_step
         )
         
-        return stats['loss']
-
 
 def add_parser():
     parser = argparse.ArgumentParser()
@@ -307,7 +305,7 @@ def setup(args):
         json.dump(config, f, sort_keys=True, indent=4)
 
     # save to wandb
-    wandb.config.update(config, allow_val_change=True)
+    wandb.config.update(config)
     return config, logger
 
 

@@ -14,7 +14,6 @@ from tensor2struct.utils import saver
 class EQRMTrainConfig(train.TrainConfig):
     burnin_iters = attr.ib(default=2500)
     quantile = attr.ib(default=0.75)
-    # lr = attr.ib(default=1e-6)
     n_domains = attr.ib(default=12)
     data_scheduler = attr.ib(default='group_db_scheduler')
 
@@ -62,7 +61,7 @@ class EQRMTrainer(train.Trainer):
                 
                 lr_scheduler = registry.construct(
                     "lr_scheduler",
-                    config.get("lr_scheduler", {"name": "noop"}),  # if not exist lr, return NoOp
+                    config.get("lr_scheduler", {"name": "noop"}),
                     param_groups = optimizer.param_groups,
                 )
                 
@@ -70,7 +69,6 @@ class EQRMTrainer(train.Trainer):
                 device=self.device,
                 quantile = self.train_config.quantile,
                 burnin_iters= self.train_config.burnin_iters,
-                # lr = self.train_config.eqrm_lr  # maybe it is the same as learning rate 
             )
 
             return optimizer, lr_scheduler, eqrm_trainer
@@ -136,7 +134,6 @@ class EQRMTrainer(train.Trainer):
                 wandb.log({"train_loss": loss}, step=last_step)
                 for i in range(len(new_lr)):
                     wandb.log({f"lr_{i}": new_lr[i]}, step=last_step)
-                # print(f'{[param["lr"] for param in optimizer.param_groups]}')
 
     def load_train_data(self):
         with self.data_random:
@@ -190,10 +187,11 @@ class EQRMTrainer(train.Trainer):
         
             if not params_searching:
                 saver.save(modeldir, last_step)
-       
+        
+        """ FOR OPTUNA """
         # score on dev set
-        val_stats = self.eval_model(last_step, train_eval_data_loader, val_data_loader, force=True)
-        return val_stats
+        # val_stats = self.eval_model(last_step, train_eval_data_loader, val_data_loader, force=True)
+        # return val_stats
 
 def _optimizer_to(optimizer, device):
     "Move optimizer state to cpu"

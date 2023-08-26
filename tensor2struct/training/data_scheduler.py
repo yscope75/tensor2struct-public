@@ -271,22 +271,3 @@ class GroupDBScheduler(DBScheduler):
         
             yield batch
              
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
