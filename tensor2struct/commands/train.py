@@ -307,7 +307,7 @@ def setup(args):
         json.dump(config, f, sort_keys=True, indent=4)
 
     # save to wandb
-    wandb.config.update(config)
+    wandb.config.update(config, allow_val_change=True)
     return config, logger
 
 
