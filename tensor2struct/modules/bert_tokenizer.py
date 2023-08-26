@@ -41,11 +41,11 @@ class BERTokenizer:
             self.auto_tokenizer = AutoTokenizer.from_pretrained(version)
         elif "vibert" in version:
             self.tokenizer = BertTokenizer.from_pretrained(version)
-            self.auto_tokenizer = BertTokenizer.from_pretrained(version)
+            self.auto_tokenizer = AutoTokenizer.from_pretrained(version)
         elif version.startswith("bert") or "electra" in version:
             vocab_path = os.path.join(vocab_dir, "vocab.txt") 
             self.tokenizer = BertWordPieceTokenizer(vocab_path, lowercase=lowercase)
-        elif version.startswith("roberta"):
+        elif (version.startswith("roberta") or "roberta" in version):
             vocab_path = os.path.join(vocab_dir, "vocab.json")
             merge_path = os.path.join(vocab_dir, "merges.txt")
             self.tokenizer = ByteLevelBPETokenizer(vocab_path, merge_path, lowercase=lowercase)
