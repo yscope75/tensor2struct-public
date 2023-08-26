@@ -10,7 +10,7 @@ import wandb
 import tensor2struct
 import experiments
 
-from tensor2struct.commands import preprocess, train, infer, batched_infer, eval, meta_train, dema_train
+from tensor2struct.commands import preprocess, train, infer, batched_infer, eval, meta_train, dema_train, eqrm_train
 
 
 @attr.s
@@ -44,6 +44,13 @@ class MetaTestConfig:
     config_args = attr.ib()
     logdir = attr.ib()
 
+
+@attr.s
+class EQRMTrainConfig:
+    config = attr.ib()
+    config_args = attr.ib()
+    logdir = attr.ib()
+    
 
 @attr.s
 class InferConfig:
@@ -253,6 +260,9 @@ def main():
     elif args.mode == "dema_train":
         train_config = DEMATrainConfig(model_config_file, model_config_args, logdir)
         dema_train.main(train_config)
+    elif args.mode == "eqrm_train":
+        train_config = EQRMTrainConfig(model_config_file, model_config_args, logdir)
+        eqrm_train.main(train_config)
     elif args.mode in ["eval", "eval_only"]:
         eval_and_report(args, exp_config, model_config_args, logdir, infer_mod=infer)
     elif args.mode == "batched_eval":

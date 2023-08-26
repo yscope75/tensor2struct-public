@@ -48,7 +48,19 @@ function(args={}, data_path=_data_path) {
         use_mask: false,
         mask_type: "l0",
         slow_parameters: null,
-        data_scheduler: "mixed_db_scheduler",
+        data_scheduler: "db_scheduler",
+
+        # fields do not exist
+        meta_train_lr: 5e-4,
+        meta_train_opt: "sgd",
+        num_particles: 5,
+        
+        # eqrm setting
+        burnin_iters: 2500,
+        quantile: 0.75,
+        n_domains: 12,
+        uniform_over_group: true,
+        num_warmup_steps: 500,
     },
 
     # merge args, to support this, you have to use $.args in your inherited function
@@ -209,6 +221,19 @@ function(args={}, data_path=_data_path) {
         inner_opt: {
             name: $.args.meta_train_opt,
             lr: $.args.meta_train_lr,
+        },
+    },
+    
+    eqrm_train: $.train + {
+        burnin_iters: $.args.burnin_iters,
+        quantile: $.args.quantile,
+        data_scheduler: {
+            name: $.args.data_scheduler,
+            batch_size: $.train.batch_size,
+            num_batch_per_train: $.args.num_batch_per_train,
+            use_similarity: false,
+            n_domains: $.args.n_domains,
+            uniform_over_group: true,
         },
     },
 
