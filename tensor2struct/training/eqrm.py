@@ -37,12 +37,10 @@ class EQRM(nn.Module):
         assert model.training
         
         losses = []
+        # Calculate loss for each env
         for env_batch in batch:
-            env_lost = self.model(env_batch)['loss']
-            losses.append(env_lost)
+            losses.append(model(env_batch)['loss'])
         
-        print('*'*5, 'DEBUGGING', '*'*5)
-        print(len(losses))
         return losses
     
     def transform(self, losses, step, unlabeled=None):
