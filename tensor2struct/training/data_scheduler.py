@@ -255,19 +255,12 @@ class GroupDBScheduler(DBScheduler):
             _p = None
 
         while True:
-            # db_id = random.sample(self.db_list, 1)[0]
             batch = []
             
             list_db_id = np.random.choice(self.db_list, self.n_domains, p=_p, replace=False)  # Replace=False if the group is larger than the sample size (obviously)
             for db_id in list_db_id:
                 sample_group = next(id2iterators[db_id])
-                batch = batch + sample_group
-
-            # for i in range(self.n_domains):
-                # using uniform distribution
-                # db_id = np.random.choice(self.db_list, self.num_batch_per_train, p=_p, replace=True)
-                # group_with_db_id = next(id2iterators[db_id[0]])
-                # batch = batch + group_with_db_id
+                batch.append(sample_group)
         
             yield batch
              

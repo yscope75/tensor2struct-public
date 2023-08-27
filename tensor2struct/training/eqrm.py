@@ -1,3 +1,4 @@
+# pylint: disable=unused-argument
 import attr
 import math
 import torch
@@ -35,18 +36,49 @@ class EQRM(nn.Module):
     def train(self, model, batch, step):
         assert model.training
         
+        print('*'*5, "DEBUGGING", '*'*5)
+        print('len(batch):', len(batch))
+        print('len(batch[0]):', len(batch[0]))
+        print('len(batch[1]):', len(batch[1]))
+        print()
+        batch_sample = [sample for env in batch for sample in env]
+        print('len(batch_sample):', len(batch_sample))
+        print('len(batch_sample[0]):', len(batch_sample[0]))
+        print()
+        
         ret_dic = {}
         with torch.set_grad_enabled(model.training):
             "1. Feed data to encoder"
             enc_list = [enc_input for enc_input, dec_output in batch]
             enc_states = model.encoder(enc_list)
             
+            print('len(enc_states):', len(enc_states))
+            
             "2. For enc in encoded"
             losses = []  # list cannot maintain grad_fn
             for enc_state, (enc_input, dec_output) in zip(enc_states, batch):
                 ret_dic = model.decoder(dec_output, enc_state)
                 losses.append(ret_dic["loss"])
+            
+            print('losses:', losses)
         
+        ret_dic = {}
+        with torch.set_grad_enabled(model.training):
+            "1. Feed data to encoder"
+            enc_list = [enc_input for enc_input, dec_output in batch_sample]
+            enc_states = model.encoder(enc_list)
+            
+            print('len(enc_states):', len(enc_states))
+            
+            "2. For enc in encoded"
+            losses_sample = []  # list cannot maintain grad_fn
+            for enc_state, (enc_input, dec_output) in zip(enc_states, batch_sample):
+                ret_dic = model.decoder(dec_output, enc_state)
+                losses_sample.append(ret_dic["loss"])
+            
+            print('losses:', losses_sample)
+            
+        x = input()    
         return losses
     
     def transform(self, losses, step, unlabeled=None):
