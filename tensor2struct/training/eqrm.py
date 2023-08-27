@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 import torch.autograd as autograd
 import collections
-
+import numpy as np
 import copy
 import higher
 import logging
@@ -32,10 +32,11 @@ class EQRM(nn.Module):
         else:
             self.dist = dist
     
-    def train(self, model, batch, step):
+    def train(self, model, batch, n_domains):
         assert model.training
         
         ret_dic = {}
+        n_points_per_domain = len(batch) // n_domains  # #samples in each env (or domain)
         with torch.set_grad_enabled(model.training):
             "1. Feed data to encoder"
             enc_list = [enc_input for enc_input, dec_output in batch]
@@ -43,9 +44,14 @@ class EQRM(nn.Module):
             
             "2. For enc in encoded"
             losses = []  # list cannot maintain grad_fn
-            for enc_state, (enc_input, dec_output) in zip(enc_states, batch):
-                ret_dic = model.decoder(dec_output, enc_state)
-                losses.append(ret_dic["loss"])
+            enc_in_out = zip(enc_states, batch)
+            for env_idx in range(n_domains):
+                x = enc_in_out[env_idx * n_points_per_domain:(env_idx + 1) * n_points_per_domain]
+                x = np.array(x)
+                print(x.shape)
+            
+                # ret_dic = model.decoder(dec_output, enc_state)
+                # losses.append(ret_dic["loss"])
         
         return losses
     
