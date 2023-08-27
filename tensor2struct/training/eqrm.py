@@ -42,21 +42,16 @@ class EQRM(nn.Module):
             enc_list = [enc_input for enc_input, dec_output in batch]
             enc_states = model.encoder(enc_list)
             
-            print('len(enc_states):', len(enc_states))
-            
             "2. For enc in encoded"
-            losses = []  # list cannot maintain grad_fn
+            losses = torch.tensor([], device=self.device)  # list cannot maintain grad_fn
             for enc_state, (enc_input, dec_output) in zip(enc_states, batch):
                 ret_dic = model.decoder(dec_output, enc_state)
-                losses.append(ret_dic["loss"])
-            
-            print('losses for each sample:', losses)
-            
+                losses = torch.cat([losses, ret_dic['loss'].reshape(1)])
+
         "3. Calculate `torch.mean` for each env "
         n_points_per_domain = len(batch) // n_domains
-        losses = [torch.mean(losses[idx * n_points_per_domain: (idx + 1) * n_points_per_domain]) 
-                  for idx in range(n_domains)]
-        print('losses for each env:', losses)
+        losses = torch.cat([torch.mean(losses[idx * n_points_per_domain: (idx + 1) * n_points_per_domain]).reshape(1) 
+                  for idx in range(n_domains)])
         return losses
     
     def transform(self, losses, step, unlabeled=None):
@@ -66,7 +61,6 @@ class EQRM(nn.Module):
             # Burn-in/anneanlig period uses ERM like penalty methods
             loss = torch.mean(losses)
         else:
-            # print('alpha-quantile')
             # Loss is the alpha-quantile value
             self.dist.estimate_parameters(losses)
             loss = self.dist.icdf(self.alpha)
