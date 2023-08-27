@@ -58,7 +58,7 @@ function(args={}, data_path=_data_path) {
         # eqrm setting
         burnin_iters: 2500,
         quantile: 0.75,
-        n_domains: 12,
+        n_domains: 8,
         uniform_over_group: true,
         num_warmup_steps: 500,
     },
@@ -227,6 +227,7 @@ function(args={}, data_path=_data_path) {
     eqrm_train: $.train + {
         burnin_iters: $.args.burnin_iters,
         quantile: $.args.quantile,
+        n_domains: $.args.n_domains,
         data_scheduler: {
             name: $.args.data_scheduler,
             batch_size: $.train.batch_size,

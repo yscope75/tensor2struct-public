@@ -75,11 +75,9 @@ class EQRMTrainer(train.Trainer):
 
     def step(self, config, train_data_scheduler, optimizer, lr_scheduler, last_step, eqrm_trainer):
         with self.model_random:
-            losses = []
-            for _i in range(self.train_config.num_batch_accumulated):  
-                batch = train_data_scheduler.get_batch(last_step)
-                losses =  losses + eqrm_trainer.train(self.model, batch, last_step)
-            
+            batch = train_data_scheduler.get_batch(last_step)
+            losses = eqrm_trainer.train(self.model, batch, n_domains=self.train_config.n_domains)
+
             loss, reset_opt = eqrm_trainer.transform(losses, last_step)
             
             # clip grad for both bert and non-bert params
