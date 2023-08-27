@@ -39,7 +39,8 @@ class EQRM(nn.Module):
         losses = []
         # Calculate loss for each env
         for env_batch in batch:
-            losses.append(model(env_batch)['loss'])
+            ret_dic = model(env_batch)
+            losses.append(ret_dic['loss'])
         
         return losses
     
