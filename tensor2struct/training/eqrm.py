@@ -36,22 +36,13 @@ class EQRM(nn.Module):
     def train(self, model, batch, n_domains):
         assert model.training
         
-        ret_dic = {}
-        with torch.set_grad_enabled(model.training):
-            "1. Feed data to encoder"
-            enc_list = [enc_input for enc_input, dec_output in batch]
-            enc_states = model.encoder(enc_list)
-            
-            "2. For enc in encoded"
-            losses = torch.tensor([], device=self.device)  # list cannot maintain grad_fn
-            for enc_state, (enc_input, dec_output) in zip(enc_states, batch):
-                ret_dic = model.decoder(dec_output, enc_state)
-                losses = torch.cat([losses, ret_dic['loss'].reshape(1)])
-
-        "3. Calculate `torch.mean` for each env "
-        n_points_per_domain = len(batch) // n_domains
-        losses = torch.cat([torch.mean(losses[idx * n_points_per_domain: (idx + 1) * n_points_per_domain]).reshape(1) 
-                  for idx in range(n_domains)])
+        losses = []
+        for env_batch in batch:
+            env_lost = self.model(env_batch)['loss']
+            losses.append(env_lost)
+        
+        print('*'*5, 'DEBUGGING', '*'*5)
+        print(len(losses))
         return losses
     
     def transform(self, losses, step, unlabeled=None):
