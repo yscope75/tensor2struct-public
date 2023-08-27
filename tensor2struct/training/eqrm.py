@@ -1,3 +1,4 @@
+# pylint: disable=unused-argument
 import attr
 import math
 import torch
@@ -32,20 +33,14 @@ class EQRM(nn.Module):
         else:
             self.dist = dist
     
-    def train(self, model, batch, step):
+    def train(self, model, batch, n_domains):
         assert model.training
         
-        ret_dic = {}
-        with torch.set_grad_enabled(model.training):
-            "1. Feed data to encoder"
-            enc_list = [enc_input for enc_input, dec_output in batch]
-            enc_states = model.encoder(enc_list)
-            
-            "2. For enc in encoded"
-            losses = []  # list cannot maintain grad_fn
-            for enc_state, (enc_input, dec_output) in zip(enc_states, batch):
-                ret_dic = model.decoder(dec_output, enc_state)
-                losses.append(ret_dic["loss"])
+        losses = []
+        # Calculate loss for each env
+        for env_batch in batch:
+            ret_dic = model(env_batch)
+            losses.append(ret_dic['loss'])
         
         return losses
     
@@ -56,7 +51,6 @@ class EQRM(nn.Module):
             # Burn-in/anneanlig period uses ERM like penalty methods
             loss = torch.mean(losses)
         else:
-            # print('alpha-quantile')
             # Loss is the alpha-quantile value
             self.dist.estimate_parameters(losses)
             loss = self.dist.icdf(self.alpha)
