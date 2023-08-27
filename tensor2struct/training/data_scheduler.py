@@ -261,6 +261,6 @@ class GroupDBScheduler(DBScheduler):
             for db_id in list_db_id:
                 sample_group = next(id2iterators[db_id])
                 batch = batch + sample_group
-        
+                
             yield batch
              
