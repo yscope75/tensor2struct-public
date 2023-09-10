@@ -37,6 +37,7 @@ function(args, data_path=_data_path) spider_base(args, data_path=_data_path) {
         },
         inter_encoder: {
             name: 'spider-iter-truncated',
+            bert_version: $.args.bert_version,
         },
         encoder: {
             name: 'spider-bert-after',
@@ -85,8 +86,6 @@ function(args, data_path=_data_path) spider_base(args, data_path=_data_path) {
 
     optimizer: {
         name: $.args.opt,
-        nesterov: $.args.nesterov,
-        momentum: $.args.momentum,
         lr: $.args.lr,
         bert_lr: $.args.bert_lr,
     },
