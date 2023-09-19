@@ -51,7 +51,7 @@ class EQRMTrainConfig:
     logdir = attr.ib()
     
 
-def train(type, params_searching=False):
+def do_train(type, params_searching=False):
     if type == "train":
         train_config = TrainConfig(model_config_file, model_config_args, logdir)
         train.main(train_config)
@@ -128,7 +128,7 @@ def main():
         study = optuna.create_study(study_name=study_name, storage=storage_name, direction='minimize', load_if_exists=True)
         study.optimize(objective, n_trials=100)
     else:
-        train(args.mode)
+        do_train(args.mode)
 
 
 if __name__ == "__main__":
