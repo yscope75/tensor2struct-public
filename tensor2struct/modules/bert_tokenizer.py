@@ -39,10 +39,7 @@ class BERTokenizer:
         if "phobert" in version: 
             self.tokenizer = Tokenizer.from_pretrained(version)
             self.auto_tokenizer = AutoTokenizer.from_pretrained(version)
-        elif "vibert" in version:
-            self.tokenizer = BertTokenizer.from_pretrained(version)
-            self.auto_tokenizer = AutoTokenizer.from_pretrained(version)
-        elif version.startswith("bert") or "electra" in version:
+        elif version.startswith("bert") or "electra" in version or "vibert" in version:
             vocab_path = os.path.join(vocab_dir, "vocab.txt") 
             self.tokenizer = BertWordPieceTokenizer(vocab_path, lowercase=lowercase)
         elif (version.startswith("roberta") or "roberta" in version):
@@ -52,7 +49,7 @@ class BERTokenizer:
         else:
             raise NotImplementedError
         
-        if ("phobert" in version) or ("vibert" in version):
+        if "phobert" in version:
             self.cls_token = self.auto_tokenizer.cls_token
             self.cls_token_id = self.auto_tokenizer.convert_tokens_to_ids(self.cls_token)
             self.sep_token = self.auto_tokenizer.sep_token
