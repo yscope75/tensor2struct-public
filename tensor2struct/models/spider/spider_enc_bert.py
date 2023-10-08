@@ -242,7 +242,7 @@ class SpiderEncoderBert(torch.nn.Module):
             relations2id=preproc.relations2id,
             enable_latent_relations=False,
         )
-
+        
         if "electra" in bert_version:
             modelclass = ElectraModel
         elif "phobert" in bert_version:
@@ -253,6 +253,8 @@ class SpiderEncoderBert(torch.nn.Module):
             modelclass = AutoModel
         else:
             raise NotImplementedError
+        
+        print(f"model class {modelclass}")
         self.bert_model = modelclass.from_pretrained(bert_version)
         self.tokenizer = self.preproc.tokenizer
         # self.bert_model.resize_token_embeddings(
