@@ -250,11 +250,11 @@ class SpiderEncoderBert(torch.nn.Module):
         elif "bert" in bert_version:
             modelclass = BertModel
         elif bert_version.startswith("xlm-roberta"):
-            modelclass = XLMRobertaForMaskedLM
+            modelclass = AutoModel
         else:
             raise NotImplementedError
         
-        self.bert_model = XLMRobertaForMaskedLM.from_pretrained(bert_version)
+        self.bert_model = modelclass.from_pretrained(bert_version)
         self.tokenizer = self.preproc.tokenizer
         # self.bert_model.resize_token_embeddings(
         #    len(self.tokenizer)
