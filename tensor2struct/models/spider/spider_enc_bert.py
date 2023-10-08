@@ -250,7 +250,7 @@ class SpiderEncoderBert(torch.nn.Module):
         elif "bert" in bert_version:
             modelclass = BertModel
         elif "xlm-roberta" in bert_version:
-            modelclass = AutoModelForMaskedLM
+            modelclass = AutoModel
         else:
             raise NotImplementedError
         self.bert_model = modelclass.from_pretrained(bert_version)
