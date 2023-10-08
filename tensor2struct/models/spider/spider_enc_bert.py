@@ -512,6 +512,7 @@ class BertEncoder(torch.nn.Module):
         elif "phobert" in bert_version:
             modelclass = AutoModel
         elif "bert" in bert_version:
+            print("enter bertmodel")
             modelclass = BertModel
         elif bert_version.startswith("xlm-roberta"):
             print("enter xlm roberta")
