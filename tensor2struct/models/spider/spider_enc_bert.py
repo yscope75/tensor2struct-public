@@ -13,7 +13,7 @@ from tensor2struct.models import abstract_preproc
 from tensor2struct.utils import serialization, vocab, registry
 from tensor2struct.modules import rat, lstm, embedders, bert_tokenizer
 
-from transformers import BertModel, ElectraModel, AutoModel, AutoModelForMaskedLM
+from transformers import BertModel, ElectraModel, AutoModel, XLMRobertaModel
 
 import logging
 
@@ -250,11 +250,11 @@ class SpiderEncoderBert(torch.nn.Module):
         elif "bert" in bert_version:
             modelclass = BertModel
         elif bert_version.startswith("xlm-roberta"):
-            modelclass = AutoModel
+            modelclass = XLMRobertaModel
         else:
             raise NotImplementedError
         
-        self.bert_model = AutoModel.from_pretrained(bert_version)
+        self.bert_model = modelclass.from_pretrained(bert_version)
         self.tokenizer = self.preproc.tokenizer
         # self.bert_model.resize_token_embeddings(
         #    len(self.tokenizer)
