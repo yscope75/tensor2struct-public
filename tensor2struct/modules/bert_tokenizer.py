@@ -113,7 +113,9 @@ class BERTokenizer:
             "for bert base multilingual cased"
             return [t for t in encodes.tokens[1:-1]]
         elif ("xlm" in self.version):
-            norm_tokens = [t.lower() for t in encodes.tokens[1:-1]]
+            encodes = self._xlmr_encode(text)
+            tokens = [text[i:j] for i, j in encodes.offset_mapping]
+            norm_tokens = [t.lower() for t in tokens[1:-1]]
             return norm_tokens
         else:
             tokens = encodes.tokens[1:-1]
