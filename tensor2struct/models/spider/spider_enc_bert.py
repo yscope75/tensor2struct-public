@@ -514,6 +514,7 @@ class BertEncoder(torch.nn.Module):
         elif "bert" in bert_version:
             modelclass = BertModel
         elif bert_version.startswith("xlm-roberta"):
+            print("enter xlm roberta")
             modelclass = AutoModel
         else:
             raise NotImplementedError
