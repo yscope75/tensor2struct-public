@@ -52,7 +52,14 @@ class BERTokenizer:
         else:
             raise NotImplementedError
         
-        if ("phobert" in version) or version.startswith("xlm-roberta"):
+        if version.startswith("xlm-roberta"):
+            self.cls_token = self.tokenizer.cls_token
+            self.cls_token_id = self.tokenizer.convert_tokens_to_ids(self.cls_token)
+            self.sep_token = self.tokenizer.sep_token
+            self.sep_token_id = self.tokenizer.convert_tokens_to_ids(self.sep_token)
+            self.pad_token = self.tokenizer.pad_token
+            self.pad_token_id = self.tokenizer.convert_tokens_to_ids(self.pad_token)
+        elif "phobert" in version:
             self.cls_token = self.auto_tokenizer.cls_token
             self.cls_token_id = self.auto_tokenizer.convert_tokens_to_ids(self.cls_token)
             self.sep_token = self.auto_tokenizer.sep_token
