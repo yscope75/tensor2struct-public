@@ -511,16 +511,13 @@ class BertEncoder(torch.nn.Module):
             modelclass = ElectraModel
         elif "phobert" in bert_version:
             modelclass = AutoModel
-        elif "bert" in bert_version:
-            print("enter bertmodel")
-            modelclass = BertModel
         elif bert_version.startswith("xlm-roberta"):
-            print("enter xlm roberta")
             modelclass = AutoModel
+        elif "bert" in bert_version:
+            modelclass = BertModel
         else:
             raise NotImplementedError
         
-        print(f"Loading Bert model ..... {modelclass} and {bert_version}")
         self.bert_model = modelclass.from_pretrained(bert_version)
         self.tokenizer = self.preproc.tokenizer
         # self.bert_model.resize_token_embeddings(
