@@ -36,7 +36,10 @@ class BERTokenizer:
             lowercase = True # roberta, electra, bert-base-uncased
         else:
             lowercase = False # bert-cased
-        if "phobert" in version: 
+        
+        if version.startswith("xlm-roberta"):
+            self.tokenizer = AutoTokenizer.from_pretrained(version)
+        elif "phobert" in version: 
             self.tokenizer = Tokenizer.from_pretrained(version)
             self.auto_tokenizer = AutoTokenizer.from_pretrained(version)
         elif version.startswith("bert") or "electra" in version or "vibert" in version:
@@ -49,7 +52,7 @@ class BERTokenizer:
         else:
             raise NotImplementedError
         
-        if "phobert" in version:
+        if ("phobert" in version) or version.startswith("xlm-roberta"):
             self.cls_token = self.auto_tokenizer.cls_token
             self.cls_token_id = self.auto_tokenizer.convert_tokens_to_ids(self.cls_token)
             self.sep_token = self.auto_tokenizer.sep_token
@@ -73,6 +76,11 @@ class BERTokenizer:
             encodes = self.tokenizer.encode(input_)
         return encodes
     
+    def _xlmr_encode(self, input_):
+        assert isinstance(input_, str)
+        encodes = self.tokenizer(input_, return_offsets_mapping=True)
+        return encodes 
+        
     def tokenize(self, text):
         encodes = self._encode(text)
         tokens = encodes.tokens[1:-1]
@@ -112,8 +120,12 @@ class BERTokenizer:
         # TODO: if text is a list, change accordingly how the offset is computed
         assert isinstance(text, str)
         # Temporary for word level
-        encodes = self._encode(text)
-        orig_tokens = [text[i:j] for i,j in encodes.offsets[1:-1]]
+        if self.version.startswith("xlm-roberta"):
+            encodes = self._xlmr_encode(text)
+            orig_tokens = [text[i:j] for i, j in encodes.offset_mapping[1:-1]]
+        else:
+            encodes = self._encode(text)
+            orig_tokens = [text[i:j] for i,j in encodes.offsets[1:-1]]
         return orig_tokens
 
     def tokenize_and_spacy(self, text, lang="en"):
@@ -156,6 +168,13 @@ class BERTokenizer:
         This function is primarily used convert text to bpe token ids
         """
         encs = self._encode(sent)
+        if self.version.startswith("xlm-roberta"):
+            encs = self._xlmr_encode(sent)
+            if cls:
+                return encs.input_ids
+            else:
+                assert encs.input_ids[0] == self.cls_token_id
+                return encs.input_ids[1:]  # remove CLS
         if cls:
             return encs.ids
         else:
