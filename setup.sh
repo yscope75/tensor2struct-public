@@ -7,7 +7,7 @@ pip install entmax
 # spacy and nltk
 python -m spacy download en_core_web_sm
 python -m spacy download en_core_web_md
-python -c "import nltk; nltk.download('stopwords'); nltk.download('punkt')"
+python -c "import nltk; nltk.download('stopwords'); nltk.download('punkt_tab')"
 
 # stanza
 python -c "import stanza; stanza.download('en')"

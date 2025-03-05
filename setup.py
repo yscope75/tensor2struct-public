@@ -24,7 +24,7 @@ setup(
         "einops~=0.2.0",
         "edit_distance~=1.0.4",
         "higher",
-        "jsonnet~=0.11.2",
+        "jsonnet~=0.12.1",
         "nltk~=3.4",
         "networkx~=2.2",
         "numpy>=1.15",
