@@ -38,6 +38,8 @@ function(args, data_path=_data_path) spider_base(args, data_path=_data_path) {
         inter_encoder: {
             name: 'spider-iter-truncated',
             bert_version: $.args.bert_version,
+            use_con_norm: $.args.use_con_norm,
+            condition_dim: $.args.condition_dim,
         },
         encoder: {
             name: 'spider-bert-after',
@@ -51,6 +53,8 @@ function(args, data_path=_data_path) spider_base(args, data_path=_data_path) {
                 num_heads: 8,
                 num_layers: $.args.num_layers,
                 enable_latent_relations: false,
+                use_con_norm: $.args.use_con_norm,
+                condition_dim: $.args.condition_dim,
             },
         },
         encoder_preproc: {

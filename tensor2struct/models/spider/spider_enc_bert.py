@@ -781,6 +781,8 @@ class SpiderIterBertTruncated(torch.nn.Module):
         include_in_memory=("question", "column", "table"),
         rat_config={},
         linking_config={},
+        use_con_norm=False,
+        condition_dim=768,
     ):
         super().__init__()
         self._device = device
@@ -791,7 +793,6 @@ class SpiderIterBertTruncated(torch.nn.Module):
             1024 if "large" in bert_version else 768
         )
         self.enc_hidden_size = self.base_enc_hidden_size
-     
         
         # rat intermediate module
         self.iter_rat = registry.instantiate(
@@ -800,7 +801,9 @@ class SpiderIterBertTruncated(torch.nn.Module):
             unused_keys={"name"},
             device=self._device,
             relations2id=preproc.relations2id,
-            hidden_size=self.enc_hidden_size
+            hidden_size=self.enc_hidden_size,
+            use_con_norm=use_con_norm,
+            condition_dim=condition_dim
         )
 
         self.tokenizer = self.preproc.tokenizer
@@ -808,7 +811,7 @@ class SpiderIterBertTruncated(torch.nn.Module):
         #    len(self.tokenizer)
         # )  # several tokens added
 
-    def forward(self, desc, plm_output, relation):
+    def forward(self, desc, plm_output, relation, condition):
         # TODO: abstract the operations of batching for bert
 
         (q_enc, col_enc, tab_enc) = plm_output
@@ -828,6 +831,7 @@ class SpiderIterBertTruncated(torch.nn.Module):
             col_enc.unsqueeze(1),
             tab_enc.unsqueeze(1),
             relation,
+            condition,
         )
         
         return (
@@ -850,6 +854,8 @@ class SpiderEncoderBertAfter(torch.nn.Module):
         include_in_memory=("question", "column", "table"),
         rat_config={},
         linking_config={},
+        use_con_norm=False,
+        condition_dim=768,
     ):
         super().__init__()
         self._device = device
@@ -871,6 +877,8 @@ class SpiderEncoderBertAfter(torch.nn.Module):
             device=self._device,
             relations2id=preproc.relations2id,
             hidden_size=self.enc_hidden_size,
+            use_con_norm=use_con_norm,
+            condition_dim=condition_dim
         )
 
         self.tokenizer = self.preproc.tokenizer
@@ -878,7 +886,7 @@ class SpiderEncoderBertAfter(torch.nn.Module):
         #    len(self.tokenizer)
         # )  # several tokens added
 
-    def forward(self, x, relation, c_base, t_base):
+    def forward(self, x, relation, c_base, t_base, condition):
 
         # rat update
         # TODO: change this, question is in the protocal of build relations
@@ -891,6 +899,7 @@ class SpiderEncoderBertAfter(torch.nn.Module):
             relation,
             c_base,
             t_base,
+            condition
         )
         
         return (

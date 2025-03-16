@@ -256,6 +256,8 @@ class IterRat(torch.nn.Module):
         tie_layers=False,
         ff_size=None,
         dropout=0.1,
+        use_con_norm=False,
+        condition_dim=768,
     ):
         super().__init__()
         self._device = device
@@ -280,26 +282,28 @@ class IterRat(torch.nn.Module):
             ),
             hidden_size,
             tie_layers,
+            use_con_norm,
+            condition_dim,
         )
         # init with xavier
         for p in self.parameters():
             if p.dim() > 1:
                 nn.init.xavier_uniform_(p)
 
-    def forward_unbatched(self, desc, q_enc, c_enc, t_enc, relation):
+    def forward_unbatched(self, desc, q_enc, c_enc, t_enc, relation, condition):
         # enc shape: total len x batch (=1) x recurrent size
         enc = torch.cat((q_enc, c_enc, t_enc), dim=0)
 
         # enc shape: batch (=1) x total len x recurrent size
         enc = enc.transpose(0, 1)
-        enc_new = self.encoder(enc, relation, mask=None)
+        enc_new =  self.encoder(enc, relation, condition, mask=None)
         c_base = q_enc.shape[0]
         t_base = q_enc.shape[0] + c_enc.shape[0]
         
         return enc_new, c_base, t_base
 
-    def forward(self, descs, q_enc, c_enc, t_enc, relations):
-        return self.forward_unbatched(descs, q_enc, c_enc, t_enc, relations)
+    def forward(self, descs, q_enc, c_enc, t_enc, relations, condition):
+        return self.forward_unbatched(descs, q_enc, c_enc, t_enc, relations, condition)
 
 class AfterRAT(torch.nn.Module):
     def __init__(
@@ -315,6 +319,8 @@ class AfterRAT(torch.nn.Module):
         tie_layers=False,
         ff_size=None,
         dropout=0.1,
+        use_con_norm=False,
+        condition_dim=768,
     ):
         super().__init__()
         self._device = device
@@ -341,6 +347,8 @@ class AfterRAT(torch.nn.Module):
             hidden_size,
             num_layers,
             tie_layers,
+            use_con_norm,
+            condition_dim,
         )
         
         # init with xavier
@@ -348,9 +356,9 @@ class AfterRAT(torch.nn.Module):
         #     if p.dim() > 1:
         #         nn.init.xavier_uniform_(p)
 
-    def forward_unbatched(self, x, relation, c_base, t_base):
+    def forward_unbatched(self, x, relation, c_base, t_base, condition):
 
-        enc_new = self.encoder(x, relation, mask=None)
+        enc_new = self.encoder(x, relation, condition, mask=None)
 
         q_enc_new = enc_new[:, :c_base]
         c_enc_new = enc_new[:, c_base:t_base]
@@ -358,8 +366,8 @@ class AfterRAT(torch.nn.Module):
 
         return q_enc_new, c_enc_new, t_enc_new
 
-    def forward(self, x, relation, c_base, t_base):
-        return self.forward_unbatched(x, relation, c_base, t_base)
+    def forward(self, x, relation, c_base, t_base, condition):
+        return self.forward_unbatched(x, relation, c_base, t_base, condition)
 
 class AlignmentWithRAT(torch.nn.Module):
     """

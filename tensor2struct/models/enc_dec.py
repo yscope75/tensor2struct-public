@@ -282,6 +282,10 @@ class BSemiBatchedEncDecModel(torch.nn.Module):
         for batch_idx, (enc_input, _) in enumerate(enc_input):
             
             sample_embed = plm_output[batch_idx]
+            # compute condition embedding for conditional layer norm
+            # currently use mean over words, consider alternative later
+            (q_enc, col_enc, tab_enc) = plm_output
+            condition = torch.mean(torch.cat((q_enc, col_enc, tab_enc), dim=0), dim=0)
             enc_new_particle_list = []
             relation = self.schema_linking(enc_input)
             # Todo: handle c-
@@ -290,7 +294,7 @@ class BSemiBatchedEncDecModel(torch.nn.Module):
                     enc_new,
                     c_base,
                     t_base,
-                ) = self.list_first_rats[i](enc_input, sample_embed, relation)
+                ) = self.list_first_rats[i](enc_input, sample_embed, relation, condition)
                 enc_new_particle_list.append(enc_new)
                 
             enc_new = torch.stack(enc_new_particle_list, dim=0).mean(dim=0)
@@ -299,7 +303,7 @@ class BSemiBatchedEncDecModel(torch.nn.Module):
                 q_enc_new_item,
                 c_enc_new_item,
                 t_enc_new_item
-            ) = self.encoder(enc_new, relation, c_base, t_base)
+            ) = self.encoder(enc_new, relation, c_base, t_base, condition)
             # attention memory 
             memory = []
             include_in_memory = self.encoder.include_in_memory

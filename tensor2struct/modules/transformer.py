@@ -4,6 +4,7 @@ import math
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from tensor2struct.modules import cond_layernorm
 import entmax
 
 """
@@ -227,37 +228,52 @@ class MultiHeadedAttentionWithRelations(nn.Module):
 class RATEncoder(nn.Module):
     "Core encoder is a stack of N layers"
 
-    def __init__(self, layer, layer_size, N, tie_layers=False):
+    def __init__(self, layer, layer_size, N,
+                 tie_layers=False, use_con_norm=False, condition_dim=768):
         super(RATEncoder, self).__init__()
+        self.use_con_norm=use_con_norm
         if tie_layers:
             self.layer = layer()
             self.layers = [self.layer for _ in range(N)]
         else:
             self.layers = clones(layer, N)
-        self.norm = nn.LayerNorm(layer_size)
+        
+        if self.use_con_norm:
+            self.norm = cond_layernorm.ConditionalLayerNorm(layer_size, condition_dim)
+        else:
+            self.norm = nn.LayerNorm(layer_size)
 
         # TODO initialize using xavier
 
-    def forward(self, x, relation, mask):
+    def forward(self, x, relation, condition, mask):
         "Pass the input (and mask) through each layer in turn."
         for layer in self.layers:
             x = layer(x, relation, mask)
+        if self.use_con_norm:
+            return self.norm(x, condition)
         return self.norm(x)
 
 
 class InterRATEncoder(torch.nn.Module):
     "Intermidiate rat for ensemble model"
     
-    def __init__(self, layer, layer_size, tie_layers=False):
+    def __init__(self, layer, layer_size,
+                 tie_layers=False, use_con_norm=False, condition_dim=768):
         super(InterRATEncoder, self).__init__()
+        self.use_con_norm = use_con_norm
         if tie_layers:
             self.layer = layer()
         else:
             self.layer = layer()
-        self.norm = nn.LayerNorm(layer_size)
+        if self.use_con_norm:
+            self.norm = cond_layernorm.ConditionalLayerNorm(layer_size, condition_dim)
+        else:
+            self.norm = nn.LayerNorm(layer_size)
         
-    def forward(self, x, relation, mask):
+    def forward(self, x, relation, condition, mask):
         x = self.layer(x, relation, mask)
+        if self.use_con_norm:
+            return self.norm(x, condition)
         return self.norm(x)
     
 # Adapted from The Annotated Transformer
