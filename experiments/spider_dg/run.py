@@ -6,7 +6,6 @@ import json
 import argparse
 import attr
 import wandb
-import optuna
 
 from experiments.spider_dg import (
     train,

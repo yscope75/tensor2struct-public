@@ -101,7 +101,7 @@ class InterDeepEnsembleModelAgnostic(nn.Module):
             # for single input source domain
             enc_states = []
             for idx, (enc_input, plm_out) in enumerate(zip(enc_input_list, plm_output)):
-                (q_enc, col_enc, tab_enc) = plm_output
+                (q_enc, col_enc, tab_enc) = plm_out
                 condition = torch.mean(torch.cat((q_enc, col_enc, tab_enc), dim=0), dim=0, keepdim=True)
                 relation = model.schema_linking(enc_input)
                 (
