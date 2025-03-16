@@ -101,18 +101,20 @@ class InterDeepEnsembleModelAgnostic(nn.Module):
             # for single input source domain
             enc_states = []
             for idx, (enc_input, plm_out) in enumerate(zip(enc_input_list, plm_output)):
+                (q_enc, col_enc, tab_enc) = plm_output
+                condition = torch.mean(torch.cat((q_enc, col_enc, tab_enc), dim=0), dim=0, keepdim=True)
                 relation = model.schema_linking(enc_input)
                 (
                     enc_new, 
                     c_base,
                     t_base,
-                ) = model.list_first_rats[i](enc_input, plm_out, relation)
+                ) = model.list_first_rats[i](enc_input, plm_out, relation, condition)
                 
                 (
                     q_enc_new_item,
                     c_enc_new_item,
                     t_enc_new_item,
-                ) = model.encoder(enc_new, relation, c_base, t_base)
+                ) = model.encoder(enc_new, relation, c_base, t_base, condition)
                 # attention memory 
                 memory = []
                 include_in_memory = model.encoder.include_in_memory
