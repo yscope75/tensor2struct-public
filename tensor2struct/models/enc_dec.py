@@ -285,7 +285,7 @@ class BSemiBatchedEncDecModel(torch.nn.Module):
             # compute condition embedding for conditional layer norm
             # currently use mean over words, consider alternative later
             (q_enc, col_enc, tab_enc) = plm_output[batch_idx]
-            condition = torch.mean(torch.cat((q_enc, col_enc, tab_enc), dim=0), dim=0)
+            condition = torch.mean(torch.cat((q_enc, col_enc, tab_enc), dim=0), dim=0, keepdim=True)
             enc_new_particle_list = []
             relation = self.schema_linking(enc_input)
             # Todo: handle c-
