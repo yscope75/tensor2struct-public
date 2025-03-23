@@ -271,7 +271,7 @@ class InterRATEncoder(torch.nn.Module):
             self.norm = nn.LayerNorm(layer_size)
         
     def forward(self, x, relation, condition, mask):
-        x = self.layer(x, relation, mask)
+        x = self.layer(x, relation, condition, mask)
         if self.use_con_norm:
             return self.norm(x, condition)
         return self.norm(x)
