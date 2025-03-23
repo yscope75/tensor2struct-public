@@ -248,7 +248,7 @@ class RATEncoder(nn.Module):
     def forward(self, x, relation, condition, mask):
         "Pass the input (and mask) through each layer in turn."
         for layer in self.layers:
-            x = layer(x, relation, mask)
+            x = layer(x, relation, condition, mask)
         if self.use_con_norm:
             return self.norm(x, condition)
         return self.norm(x)
