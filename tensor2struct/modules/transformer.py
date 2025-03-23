@@ -312,6 +312,21 @@ class SublayerConnection(nn.Module):
         "Apply residual connection to any sublayer with the same size."
         return x + self.dropout(sublayer(self.norm(x)))
 
+# Sublayer connection with conditional layernorm
+class SublayerConnectionWCon(nn.Module):
+    """
+    A residual connection followed by a layer norm.
+    Note for code simplicity the norm is first as opposed to last.
+    """
+
+    def __init__(self, size, dropout, condition_dim=768):
+        super(SublayerConnection, self).__init__()
+        self.norm = cond_layernorm.ConditionalLayerNorm(size, condition_dim)
+        self.dropout = nn.Dropout(dropout)
+
+    def forward(self, x, sublayer, condition):
+        "Apply residual connection to any sublayer with the same size."
+        return x + self.dropout(sublayer(self.norm(x, condition)))
 
 # Adapted from The Annotated Transformer
 class EncoderLayer(nn.Module):
@@ -439,11 +454,17 @@ class EncoderLayerWithLatentRelations(nn.Module):
         dropout=0.1,
         enable_latent_relations=False,
         combine_latent_relations=False,
+        use_con_norm=False,
+        condition_dim=768,
     ):
         super().__init__()
         self.self_attn = self_attn
         self.feed_forward = feed_forward
-        self.sublayer = clones(lambda: SublayerConnection(size, dropout), 2)
+        self.use_con_norm = use_con_norm
+        if not self.use_con_norm:
+            self.sublayer = clones(lambda: SublayerConnection(size, dropout), 2)
+        else:
+            self.sublayer = clones(lambda: SublayerConnectionWCon(size, dropout, condition_dim), 2)
         self.size = size
         self.relations2id = relations2id
         num_relation_kinds = len(relations2id)
@@ -551,7 +572,7 @@ class EncoderLayerWithLatentRelations(nn.Module):
         relation_v = torch.cat([q_relation_v, qct_relation_v], 0)
         return relation_k, relation_v
 
-    def forward(self, x, relations, mask):
+    def forward(self, x, relations, mask, condition=None):
         """
         x: 1 * len * feat_size
         ct_relation: ct_len * ct_len
@@ -574,7 +595,13 @@ class EncoderLayerWithLatentRelations(nn.Module):
             relation_v = self.relation_v_emb(relations.predefined_relation)
 
         relation_k, relation_v = relation_k.unsqueeze(0), relation_v.unsqueeze(0)
-
+        # feed sentence embedding for conditional layer norm
+        if not condition and self.use_con_norm:
+            x = self.sublayer[0](
+                x, lambda x: self.self_attn(x, x, x, relation_k, relation_v, mask), condition
+            )
+            return self.sublayer[1](x, self.feed_forward, condition)
+        
         x = self.sublayer[0](
             x, lambda x: self.self_attn(x, x, x, relation_k, relation_v, mask)
         )

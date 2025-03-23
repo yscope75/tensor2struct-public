@@ -53,9 +53,9 @@ function(args, data_path=_data_path) spider_base(args, data_path=_data_path) {
                 num_heads: 8,
                 num_layers: $.args.num_layers,
                 enable_latent_relations: false,
-                use_con_norm: $.args.use_con_norm,
-                condition_dim: $.args.condition_dim,
             },
+            use_con_norm: $.args.use_con_norm,
+            condition_dim: $.args.condition_dim,
         },
         encoder_preproc: {
             context: {
@@ -85,7 +85,6 @@ function(args, data_path=_data_path) spider_base(args, data_path=_data_path) {
             value_tokenizer: $.model.encoder_preproc.bert_version,
         },
         num_particles: $.args.num_particles,
-
     },
 
     optimizer: {
