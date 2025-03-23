@@ -596,7 +596,7 @@ class EncoderLayerWithLatentRelations(nn.Module):
 
         relation_k, relation_v = relation_k.unsqueeze(0), relation_v.unsqueeze(0)
         # feed sentence embedding for conditional layer norm
-        if not condition and self.use_con_norm:
+        if condition is not None and self.use_con_norm:
             x = self.sublayer[0](
                 x, lambda x: self.self_attn(x, x, x, relation_k, relation_v, mask), condition
             )
