@@ -360,7 +360,7 @@ class AfterRAT(torch.nn.Module):
 
     def forward_unbatched(self, x, relation, c_base, t_base, condition):
 
-        enc_new = self.encoder(x, relation, condition, mask=None)
+        enc_new = self.encoder(x, relation, condition=condition, mask=None)
 
         q_enc_new = enc_new[:, :c_base]
         c_enc_new = enc_new[:, c_base:t_base]
