@@ -572,7 +572,7 @@ class EncoderLayerWithLatentRelations(nn.Module):
         relation_v = torch.cat([q_relation_v, qct_relation_v], 0)
         return relation_k, relation_v
 
-    def forward(self, x, relations, mask, condition=None):
+    def forward(self, x, relations, condition, mask):
         """
         x: 1 * len * feat_size
         ct_relation: ct_len * ct_len
