@@ -320,7 +320,7 @@ class SublayerConnectionWCon(nn.Module):
     """
 
     def __init__(self, size, dropout, condition_dim=768):
-        super(SublayerConnection, self).__init__()
+        super(SublayerConnectionWCon, self).__init__()
         self.norm = cond_layernorm.ConditionalLayerNorm(size, condition_dim)
         self.dropout = nn.Dropout(dropout)
 
