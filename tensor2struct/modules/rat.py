@@ -279,6 +279,8 @@ class IterRat(torch.nn.Module):
                 num_latent_relations,
                 enable_latent_relations=enable_latent_relations,
                 combine_latent_relations=combine_latent_relations,
+                use_con_norm=use_con_norm,
+                condition_dim=condition_dim,
             ),
             hidden_size,
             tie_layers,
