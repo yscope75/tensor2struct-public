@@ -29,11 +29,14 @@ class ConditionalLayerNorm(nn.Module):
         nn.init.constant_(self.gammar_transform.bias, 1.0)
         nn.init.constant_(self.beta_transform.weight, 0.0)
         nn.init.constant_(self.beta_transform.bias, 0.0)
-        
+        for param in self.gammar_transform.parameters():
+            param.requires_grad = False
+        for param in self.beta_transform.parameters():
+            param.requires_grad = False
     def forward(self, x, condition):
         """
         Args:
-            x (Tensor): Input tensor of shape (batch_size, seq_len, normalized_shape)
+            x (Tensor): Input tensor of shape (batch_size, seq_len, hidden_size)
             condition (Tensor): Condition tensor of shape (batch_size, condition_dim)
         Returns:
             Tensor: Normalized output with the same shape as x

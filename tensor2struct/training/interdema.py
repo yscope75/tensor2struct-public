@@ -66,7 +66,7 @@ class InterDeepEnsembleModelAgnostic(nn.Module):
         
         inner_inter_params = []
         for i in range(self.num_particles):
-            inner_inter_params.append(list(model.list_first_rats[i].parameters()))
+            inner_inter_params.append(list(model.list_first_rats[i].get_trainable_parameters()))
             
         params_matrix = torch.stack(
             [torch.nn.utils.parameters_to_vector(params) for params in inner_inter_params],
@@ -158,8 +158,8 @@ class InterDeepEnsembleModelAgnostic(nn.Module):
             final_losses.append(loss.item()*num_batch_accumulated)
             grads = torch.autograd.grad(loss, 
                                         list(model.bert_model.parameters())
-                                        + list(model.list_first_rats[i].parameters()) 
-                                        + list(model.encoder.parameters()) 
+                                        + list(model.list_first_rats[i].get_trainable_parameters()) 
+                                        + list(model.encoder.get_trainable_parameters()) 
                                         + list(model.aligner.parameters())
                                         + list(model.decoder.parameters()),
                                         allow_unused=True)
@@ -219,9 +219,9 @@ class InterDeepEnsembleModelAgnostic(nn.Module):
         # encoders_grads = distance_nll - grad_kernel
         # copy inner_grads to main network
         for i in range(self.num_particles):
-            for p_tar, p_src in zip(model.list_first_rats[i].parameters(),
+            for p_tar, p_src in zip(model.list_first_rats[i].get_trainable_parameters(),
                                     InterDeepEnsembleModelAgnostic.vector_to_list_params(encoders_grads[i],
-                                                                                            model.list_first_rats[i].parameters())):
+                                                                                            model.list_first_rats[i].get_trainable_parameters())):
                 p_tar.grad.data.add_(p_src) # todo: divide by num_of_sample if inner is in ba
         # # copy bert grads
         for p_tar, p_src in zip(model.bert_model.parameters(),
@@ -231,7 +231,7 @@ class InterDeepEnsembleModelAgnostic(nn.Module):
             else:
                 p_tar.grad.data.add_(torch.zeros_like(p_tar))
         # copy encoder grads 
-        for p_tar, p_src in zip(model.encoder.parameters(),
+        for p_tar, p_src in zip(model.encoder.get_trainable_parameters(),
                                 encoder_grads):
             if p_src is not None:
                 p_tar.grad.data.add_(1/self.num_particles*p_src)
