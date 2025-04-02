@@ -73,8 +73,8 @@ class InterDeepEnsembleModelAgnostic(nn.Module):
             dim=0
         )
         bert_len = len(list(model.bert_model.parameters()))
-        particle_len = len(list(model.list_first_rats[0].parameters()))
-        encoder_len = len(list(model.encoder.parameters()))
+        particle_len = len(list(model.list_first_rats[0].get_trainable_parameters()))
+        encoder_len = len(list(model.encoder.get_trainable_parameters()))
         aligner_len = len(list(model.aligner.parameters()))
         ret_dic = {}
         # for computing distance 

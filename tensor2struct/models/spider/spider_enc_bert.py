@@ -839,6 +839,9 @@ class SpiderIterBertTruncated(torch.nn.Module):
             c_base,
             t_base
         )
+    
+    def get_trainable_parameters(self):
+        return filter(lambda p: p.requires_grad, self.parameters())
         
 # after iter encoder layer
 @registry.register("encoder", "spider-bert-after")
@@ -907,6 +910,9 @@ class SpiderEncoderBertAfter(torch.nn.Module):
             c_enc_new_item,
             t_enc_new_item
         )
+    
+    def get_trainable_parameters(self):
+        return filter(lambda p: p.requires_grad, self.parameters())
         
 @registry.register("encoder", "spider-bert-truncated")
 class SpiderEncoderBertTruncated(torch.nn.Module):
