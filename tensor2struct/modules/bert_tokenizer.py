@@ -37,7 +37,7 @@ class BERTokenizer:
         else:
             lowercase = False # bert-cased
         
-        if version.startswith("xlm-roberta"):
+        if "xlm-roberta" in version:
             self.tokenizer = AutoTokenizer.from_pretrained(version)
         elif "phobert" in version: 
             self.tokenizer = Tokenizer.from_pretrained(version)
@@ -52,7 +52,7 @@ class BERTokenizer:
         else:
             raise NotImplementedError
         
-        if version.startswith("xlm-roberta"):
+        if "xlm-roberta" in version:
             self.cls_token = self.tokenizer.cls_token
             self.cls_token_id = self.tokenizer.convert_tokens_to_ids(self.cls_token)
             self.sep_token = self.tokenizer.sep_token
@@ -129,7 +129,7 @@ class BERTokenizer:
         # TODO: if text is a list, change accordingly how the offset is computed
         assert isinstance(text, str)
         # Temporary for word level
-        if self.version.startswith("xlm-roberta"):
+        if "xlm-roberta" in self.version:
             encodes = self._xlmr_encode(text)
             orig_tokens = [text[i:j] for i, j in encodes.offset_mapping[1:-1]]
         else:
@@ -177,7 +177,7 @@ class BERTokenizer:
         This function is primarily used convert text to bpe token ids
         """
         encs = self._encode(sent)
-        if self.version.startswith("xlm-roberta"):
+        if "xlm-roberta" in self.version:
             encs = self._xlmr_encode(sent)
             if cls:
                 return encs.input_ids

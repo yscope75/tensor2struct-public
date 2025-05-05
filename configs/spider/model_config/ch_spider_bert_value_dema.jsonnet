@@ -1,9 +1,9 @@
-local _data_path = 'data/cspider/';
+local _data_path = 'data/CSpider/';
 local spider_base = import "spider_base_0512.libsonnet";
 
 function(args, data_path=_data_path) spider_base(args, data_path=_data_path) {
     data: {
-        local PREFIX = data_path + "raw/",
+        local PREFIX = data_path,
 
         train: {
             name: 'spider', 
@@ -22,9 +22,9 @@ function(args, data_path=_data_path) spider_base(args, data_path=_data_path) {
         },
         test: {
             name: 'spider',
-            paths: [PREFIX + 'test.json'],
-            tables_paths: [PREFIX + 'tables.json'],
-            db_path: PREFIX + 'database',
+            paths: [PREFIX + 'test_data/test.json'],
+            tables_paths: [PREFIX + 'test_data/tables_test.json'],
+            db_path: PREFIX + 'test_database',
         }
 
     },

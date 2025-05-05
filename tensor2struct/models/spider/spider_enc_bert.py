@@ -249,7 +249,7 @@ class SpiderEncoderBert(torch.nn.Module):
             modelclass = AutoModel
         elif "bert" in bert_version:
             modelclass = BertModel
-        elif bert_version.startswith("xlm-roberta"):
+        elif "xlm-roberta" in bert_version:
             modelclass = AutoModel
         else:
             raise NotImplementedError
@@ -511,7 +511,7 @@ class BertEncoder(torch.nn.Module):
             modelclass = ElectraModel
         elif "phobert" in bert_version:
             modelclass = AutoModel
-        elif bert_version.startswith("xlm-roberta"):
+        elif "xlm-roberta" in bert_version:
             modelclass = AutoModel
         elif "bert" in bert_version:
             modelclass = BertModel
