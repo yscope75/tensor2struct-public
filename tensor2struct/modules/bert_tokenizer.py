@@ -179,7 +179,7 @@ class BERTokenizer:
         This function is primarily used convert text to bpe token ids
         """
         encs = self._encode(sent)
-        if "xlm-roberta" in self.version:
+        if "xlm-roberta" in self.version or "bert-base-multilingual" in self.version:
             encs = self._xlmr_encode(sent)
             if cls:
                 return encs.input_ids
