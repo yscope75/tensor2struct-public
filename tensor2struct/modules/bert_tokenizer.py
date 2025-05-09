@@ -54,7 +54,7 @@ class BERTokenizer:
         else:
             raise NotImplementedError
         
-        if "xlm-roberta" in version:
+        if "xlm-roberta" in version or "bert-base-multilingual" in version:
             self.cls_token = self.tokenizer.cls_token
             self.cls_token_id = self.tokenizer.convert_tokens_to_ids(self.cls_token)
             self.sep_token = self.tokenizer.sep_token
