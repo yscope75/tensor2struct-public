@@ -131,7 +131,7 @@ class BERTokenizer:
         # TODO: if text is a list, change accordingly how the offset is computed
         assert isinstance(text, str)
         # Temporary for word level
-        if "xlm-roberta" in self.version:
+        if "xlm-roberta" in self.version or "bert-base-multilingual" in self.version:
             encodes = self._xlmr_encode(text)
             orig_tokens = [text[i:j] for i, j in encodes.offset_mapping[1:-1]]
         else:
