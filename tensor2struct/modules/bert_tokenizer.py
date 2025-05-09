@@ -111,8 +111,8 @@ class BERTokenizer:
         elif ("velectra" in self.version):
             "Vietnamese Electra is cased"
             return [t for t in encodes.tokens[1:-1]]
-        elif ("bert-base-multilingual" in self.version):
-            "for bert base multilingual"
+        elif ("bert-base-multilingual" in self.version and "cased" in self.version):
+            "for bert base multilingual cased"
             return [t for t in encodes.tokens[1:-1]]
         elif ("xlm" in self.version):
             encodes = self._xlmr_encode(text)
