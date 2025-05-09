@@ -39,6 +39,8 @@ class BERTokenizer:
         
         if "xlm-roberta" in version:
             self.tokenizer = AutoTokenizer.from_pretrained(version)
+        if "bert-base-multilingual" in version:
+            self.tokenizer = AutoTokenizer.from_pretrained(version)
         elif "phobert" in version: 
             self.tokenizer = Tokenizer.from_pretrained(version)
             self.auto_tokenizer = AutoTokenizer.from_pretrained(version)
